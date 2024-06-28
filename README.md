@@ -2,7 +2,7 @@
 Proxy-Auto-Config Parser
 
 How to:
-
+```
 public static void main(String[] args) {
 		try {
 			String pacUrlString = PacScriptParser.findPacFileUrlByWpad();
@@ -22,3 +22,4 @@ public static void main(String[] args) {
 			e.printStackTrace();
 		}
 	}
+```
