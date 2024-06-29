@@ -34,7 +34,14 @@ public static void main(String[] args) {
 		}
 
 		List<Proxy> multipleAllowedProxySettingsForThisUrl = pacScriptParser.discoverProxy(urlToCall);
-		HttpURLConnection httpURLConnection = (HttpURLConnection) new URL(urlToCall).openConnection(multipleAllowedProxySettingsForThisUrl.get(0));
+		Proxy proxy = multipleAllowedProxySettingsForThisUrl.get(0);
+		HttpURLConnection httpURLConnection;
+		if (proxy == null) {
+			// DIRECT connection without proxy
+			httpURLConnection = (HttpURLConnection) new URL(urlToCall).openConnection();
+		} else {
+			httpURLConnection = (HttpURLConnection) new URL(urlToCall).openConnection(proxy);
+		}
 		httpURLConnection.connect();
 	} catch (Exception e) {
 		e.printStackTrace();
