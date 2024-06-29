@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Stack;
@@ -278,42 +279,84 @@ public class PacScriptParserUtilities {
 						tokenIndex++;
 						final int ifCodeBlockEnd = tokenIndex;
 						ifCodeBlockTokens = codeBlockTokens.subList(ifCodeBlockStart, ifCodeBlockEnd);
-						tokenIndex = ifCodeBlockEnd + 1;
+						tokenIndex = ifCodeBlockEnd;
 					}
 				}
 
-				nextToken = codeBlockTokens.get(tokenIndex);
-				if ("else".equals(nextToken)) {
-					tokenIndex++;
+				Condition parentCondition = new Condition(codeBlockTokens.subList(conditionStart + 1, conditionEnd), ifCodeBlockTokens, null);
+				statements.add(parentCondition);
+
+				boolean foundElseIf = true;
+				while (foundElseIf) {
+					foundElseIf = false;
+
 					nextToken = codeBlockTokens.get(tokenIndex);
-					List<String> endCodeBlockTokens;
-					if ("{".equals(nextToken)) {
-						final int elseCodeBlockStart = tokenIndex;
-						final int elseCodeBlockEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, elseCodeBlockStart);
-						endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart + 1, elseCodeBlockEnd);
-						statements.add(new Condition(codeBlockTokens.subList(conditionStart + 1, conditionEnd), ifCodeBlockTokens, endCodeBlockTokens));
-						tokenIndex = elseCodeBlockEnd + 1;
-					} else if ("if".equals(nextToken)) {
-						// TODO else if
-						throw new RuntimeException("'else if' not supported yet");
-					} else {
-						final int elseCodeBlockStart = tokenIndex;
-						while (tokenIndex < codeBlockTokens.size() && !";".equals(codeBlockTokens.get(tokenIndex))) {
-							tokenIndex++;
-						}
-						if (!";".equals(codeBlockTokens.get(tokenIndex))) {
-							throw new RuntimeException("Unexpected code at token index " + tokenIndex + ": " + nextToken);
-						} else {
-							tokenIndex++;
-							final int elseCodeBlockEnd = tokenIndex;
-							endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart, elseCodeBlockEnd);
-							statements.add(new Condition(codeBlockTokens.subList(conditionStart + 1, conditionEnd), ifCodeBlockTokens, endCodeBlockTokens));
+					if ("else".equals(nextToken)) {
+						tokenIndex++;
+						nextToken = codeBlockTokens.get(tokenIndex);
+						List<String> endCodeBlockTokens;
+						if ("{".equals(nextToken)) {
+							final int elseCodeBlockStart = tokenIndex;
+							final int elseCodeBlockEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, elseCodeBlockStart);
+							endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart + 1, elseCodeBlockEnd);
+							parentCondition.setElseCodeBlockTokens(endCodeBlockTokens);
 							tokenIndex = elseCodeBlockEnd + 1;
+						} else if ("if".equals(nextToken)) {
+							foundElseIf = true;
+							tokenIndex++;
+							nextToken = codeBlockTokens.get(tokenIndex);
+							if (!"(".equals(nextToken)) {
+								throw new RuntimeException("Unexpected code at token index " + tokenIndex + ": " + nextToken);
+							}
+							final int subConditionStart = tokenIndex;
+							final int subConditionEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, subConditionStart);
+
+							tokenIndex = subConditionEnd + 1;
+							nextToken = codeBlockTokens.get(tokenIndex);
+
+							List<String> subIfCodeBlockTokens;
+							if ("{".equals(nextToken)) {
+								final int ifCodeBlockStart = tokenIndex;
+								final int ifCodeBlockEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, ifCodeBlockStart);
+								subIfCodeBlockTokens = codeBlockTokens.subList(ifCodeBlockStart + 1, ifCodeBlockEnd);
+								tokenIndex = ifCodeBlockEnd + 1;
+							} else {
+								final int ifCodeBlockStart = tokenIndex;
+								while (tokenIndex < codeBlockTokens.size() && !";".equals(codeBlockTokens.get(tokenIndex))) {
+									tokenIndex++;
+								}
+								if (!";".equals(codeBlockTokens.get(tokenIndex))) {
+									throw new RuntimeException("Unexpected code at token index " + tokenIndex + ": " + nextToken);
+								} else {
+									tokenIndex++;
+									final int ifCodeBlockEnd = tokenIndex;
+									subIfCodeBlockTokens = codeBlockTokens.subList(ifCodeBlockStart, ifCodeBlockEnd);
+									tokenIndex = ifCodeBlockEnd;
+								}
+							}
+
+							final Condition subCondition = new Condition(codeBlockTokens.subList(subConditionStart + 1, subConditionEnd), subIfCodeBlockTokens, null);
+							parentCondition.setElseCodeBlockStatements(Collections.singletonList(subCondition));
+							parentCondition = subCondition;
+						} else {
+							final int elseCodeBlockStart = tokenIndex;
+							while (tokenIndex < codeBlockTokens.size() && !";".equals(codeBlockTokens.get(tokenIndex))) {
+								tokenIndex++;
+							}
+							if (!";".equals(codeBlockTokens.get(tokenIndex))) {
+								throw new RuntimeException("Unexpected code at token index " + tokenIndex + ": " + nextToken);
+							} else {
+								tokenIndex++;
+								final int elseCodeBlockEnd = tokenIndex;
+								endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart, elseCodeBlockEnd);
+								parentCondition.setElseCodeBlockTokens(endCodeBlockTokens);
+								tokenIndex = elseCodeBlockEnd;
+							}
 						}
+					} else {
+						parentCondition.setElseCodeBlockTokens(null);
+						tokenIndex--;
 					}
-				} else {
-					statements.add(new Condition(codeBlockTokens.subList(conditionStart + 1, conditionEnd), ifCodeBlockTokens, null));
-					tokenIndex--;
 				}
 			} else if ("var".equals(nextToken)) {
 				tokenIndex++;

@@ -18,6 +18,20 @@ public class Condition implements Statement {
 		}
 	}
 
+	public Condition setElseCodeBlockTokens(final List<String> elseCodeBlockTokens) {
+		if (elseCodeBlockTokens != null) {
+			elseStatements = PacScriptParserUtilities.parseCodeBlockTokens(elseCodeBlockTokens);
+		} else {
+			elseStatements = null;
+		}
+		return this;
+	}
+
+	public Condition setElseCodeBlockStatements(final List<Statement> elseStatements) {
+		this.elseStatements = elseStatements;
+		return this;
+	}
+
 	@Override
 	public Object execute(final Map<String, Object> environmentVariables, final Map<String, Method> definedMethods) {
 		final Object conditionResult = condition.execute(environmentVariables, definedMethods);
@@ -103,4 +117,5 @@ public class Condition implements Statement {
 			return null;
 		}
 	}
+
 }
