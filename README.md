@@ -33,8 +33,8 @@ public static void main(String[] args) {
  			pacScriptParser = new PacScriptParser(pacData);
 		}
 
-		Proxy multipleAllowedProxySettingsForThisUrl = pacScriptParser.discoverProxy(urlToCall);
-		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection(multipleAllowedProxySettingsForThisUrl.get(0));
+		List<Proxy> multipleAllowedProxySettingsForThisUrl = pacScriptParser.discoverProxy(urlToCall);
+		HttpURLConnection httpURLConnection = (HttpURLConnection) new URL(urlToCall).openConnection(multipleAllowedProxySettingsForThisUrl.get(0));
 		httpURLConnection.connect();
 	} catch (Exception e) {
 		e.printStackTrace();
