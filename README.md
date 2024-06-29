@@ -10,8 +10,29 @@ How to:
 public static void main(String[] args) {
 	try {
 		String urlToCall = "https://example.com";
-		String pacUrlString = PacScriptParser.findPacFileUrlByWpad();
-		PacScriptParser pacScriptParser = new PacScriptParser(new URL(pacUrlString));
+		String pacUrlString = null; // Configure your PAC file url, if known
+
+		if (pacUrlString == null) {
+			// Try to detect PAC file url by WPAD (Web Proxy Autodiscovery Protocol) standard
+			pacUrlString = PacScriptParser.findPacFileUrlByWpad();
+		}
+
+		PacScriptParser pacScriptParser;
+		if (pacUrlString != null) {
+ 			pacScriptParser = new PacScriptParser(new URL(pacUrlString));
+		} else {
+			// Use my own PAC data
+			String pacData = 
+				"function FindProxyForURL(url, host) {"
+				+ "if (isPlainHostName(host)) {"
+				+ "return \"DIRECT\";"
+				+ "} else {"
+				+ "return \"PROXY proxy:80\";"
+				+ "}"
+				+ "}";
+ 			pacScriptParser = new PacScriptParser(pacData);
+		}
+
 		Proxy multipleAllowedProxySettingsForThisUrl = pacScriptParser.discoverProxy(urlToCall);
 		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection(multipleAllowedProxySettingsForThisUrl.get(0));
 		httpURLConnection.connect();
