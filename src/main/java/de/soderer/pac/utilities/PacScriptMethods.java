@@ -1,6 +1,7 @@
 package de.soderer.pac.utilities;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -21,8 +22,10 @@ import java.util.TimeZone;
 
 public class PacScriptMethods {
 	private final static String GMT = "GMT";
-	private final static List<String> WEEKDAYS_SHORT = Collections.unmodifiableList(Arrays.asList("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"));
-	private final static List<String> MONTH_SHORT = Collections.unmodifiableList(Arrays.asList("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"));
+	private final static List<String> WEEKDAYS_SHORT = Collections
+			.unmodifiableList(Arrays.asList("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"));
+	private final static List<String> MONTH_SHORT = Collections.unmodifiableList(
+			Arrays.asList("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"));
 
 	public static boolean isPlainHostName(final String host) {
 		return !host.contains(".");
@@ -46,14 +49,19 @@ public class PacScriptMethods {
 	}
 
 	public static boolean isInNet(String host, final String pattern, final String mask) {
-		host = dnsResolve(host);
-		if (host == null || host.length() == 0) {
+		try {
+			host = dnsResolve(host);
+			if (host == null || host.length() == 0) {
+				return false;
+			} else {
+				final long lhost = parseIpAddressToLong(host);
+				final long lpattern = parseIpAddressToLong(pattern);
+				final long lmask = parseIpAddressToLong(mask);
+				return (lhost & lmask) == (lpattern & lmask);
+			}
+		} catch (@SuppressWarnings("unused") final Exception e) {
 			return false;
 		}
-		final long lhost = parseIpAddressToLong(host);
-		final long lpattern = parseIpAddressToLong(pattern);
-		final long lmask = parseIpAddressToLong(mask);
-		return (lhost & lmask) == lpattern;
 	}
 
 	public static String dnsResolve(final String host) {
@@ -118,7 +126,8 @@ public class PacScriptMethods {
 		}
 	}
 
-	public static boolean dateRange(final Object dayStart, final Object monthStart, final Object yearStart, final Object dayEnd, final Object monthEnd, final Object yearEnd, final Object gmt) {
+	public static boolean dateRange(final Object dayStart, final Object monthStart, final Object yearStart,
+			final Object dayEnd, final Object monthEnd, final Object yearEnd, final Object gmt) {
 		final Map<String, Integer> params = new HashMap<>();
 		parseDateParam(params, dayStart);
 		parseDateParam(params, monthStart);
@@ -169,7 +178,8 @@ public class PacScriptMethods {
 		return current.compareTo(from) >= 0 && current.compareTo(to) <= 0;
 	}
 
-	public static boolean timeRange(final Object hour1, final Object min1, final Object sec1, final Object hour2, final Object min2, final Object sec2, final Object gmt) {
+	public static boolean timeRange(final Object hour1, final Object min1, final Object sec1, final Object hour2,
+			final Object min2, final Object sec2, final Object gmt) {
 		final boolean useGmt = GMT.equalsIgnoreCase(String.valueOf(min1)) || GMT.equalsIgnoreCase(String.valueOf(sec1))
 				|| GMT.equalsIgnoreCase(String.valueOf(min2)) || GMT.equalsIgnoreCase(String.valueOf(gmt));
 
@@ -233,9 +243,34 @@ public class PacScriptMethods {
 		return isResolvable(host);
 	}
 
-	public static boolean isInNetEx(@SuppressWarnings("unused") final String ipAddress, @SuppressWarnings("unused") final String ipPrefix) {
-		// TODO
-		return false;
+	public static boolean isInNetEx(final String ipAddress, final String ipPrefix) {
+		try {
+			BigInteger ipAddressInteger = new BigInteger(1, InetAddress.getByName(ipAddress).getAddress());
+			BigInteger ipPrefixInteger;
+			final int bitMaskLength;
+			if (ipPrefix.contains("/")) {
+				ipPrefixInteger = new BigInteger(1, InetAddress.getByName(ipPrefix.substring(0, ipPrefix.indexOf("/"))).getAddress());
+				bitMaskLength = Integer.parseInt(ipPrefix.substring(ipPrefix.indexOf("/") + 1));
+			} else {
+				ipPrefixInteger = new BigInteger(1, InetAddress.getByName(ipPrefix).getAddress());
+				if (ipPrefix.contains(":")) {
+					bitMaskLength = 32;
+				} else {
+					bitMaskLength = 128;
+				}
+			}
+
+			for (int i = 0; i < ipAddressInteger.bitLength() - bitMaskLength; i++) {
+				ipAddressInteger = ipAddressInteger.clearBit(i);
+			}
+			for (int i = 0; i < ipPrefixInteger.bitLength() - bitMaskLength; i++) {
+				ipPrefixInteger = ipPrefixInteger.clearBit(i);
+			}
+
+			return ipAddressInteger.equals(ipPrefixInteger);
+		} catch (@SuppressWarnings("unused") final Exception e) {
+			return false;
+		}
 	}
 
 	public static String dnsResolveEx(final String host) {

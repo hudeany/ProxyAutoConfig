@@ -8,8 +8,8 @@ import org.junit.Test;
 
 import de.soderer.pac.utilities.PacScriptParserUtilities;
 
+@SuppressWarnings("static-method")
 public class PacTest {
-	@SuppressWarnings("static-method")
 	@Test
 	public void test1() {
 		try {
