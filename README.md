@@ -9,10 +9,11 @@ How to:
 ```
 public static void main(String[] args) {
 	try {
+		String urlToCall = "https://example.com";
 		String pacUrlString = PacScriptParser.findPacFileUrlByWpad();
 		PacScriptParser pacScriptParser = new PacScriptParser(new URL(pacUrlString));
-		Proxy proxyGoogle = pacScriptParser.discoverProxy("https://example.com").get(0)
-		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection(proxy);
+		Proxy multipleAllowedProxySettingsForThisUrl = pacScriptParser.discoverProxy(urlToCall);
+		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection(multipleAllowedProxySettingsForThisUrl.get(0));
 		httpURLConnection.connect();
 	} catch (Exception e) {
 		e.printStackTrace();
