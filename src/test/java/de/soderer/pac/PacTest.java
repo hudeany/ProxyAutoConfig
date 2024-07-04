@@ -1,6 +1,5 @@
 package de.soderer.pac;
 
-import java.net.Proxy;
 import java.util.List;
 
 import org.junit.Assert;
@@ -26,9 +25,9 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Basic.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
-			final List<Proxy> proxies = pacScriptParser.discoverProxy("https://example.com");
-			Assert.assertEquals(1, proxies.size());
-			Assert.assertEquals("HTTP @ proxy/<unresolved>:80", proxies.get(0).toString());
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals(1, proxySettings.size());
+			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
@@ -40,9 +39,9 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_NoBlockBracket.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
-			final List<Proxy> proxies = pacScriptParser.discoverProxy("https://example.com");
-			Assert.assertEquals(1, proxies.size());
-			Assert.assertEquals("HTTP @ proxy/<unresolved>:80", proxies.get(0).toString());
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals(1, proxySettings.size());
+			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
@@ -54,9 +53,9 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Methods.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
-			final List<Proxy> proxies = pacScriptParser.discoverProxy("https://example.com");
-			Assert.assertEquals(1, proxies.size());
-			Assert.assertEquals("HTTP @ /10.0.0.1:8080", proxies.get(0).toString());
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals(1, proxySettings.size());
+			Assert.assertEquals("PROXY 10.0.0.1:8080", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
@@ -64,22 +63,36 @@ public class PacTest {
 	}
 
 	@Test
-	public void testElseIf() {
+	public void testConditions() {
 		try {
-			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_ElseIf.pac")));
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Conditions.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
-			final List<Proxy> proxiesExample = pacScriptParser.discoverProxy("https://example.com");
-			Assert.assertEquals(1, proxiesExample.size());
-			Assert.assertEquals("HTTP @ proxy/<unresolved>:80", proxiesExample.get(0).toString());
+			final List<String> proxyExample = pacScriptParser.discoverProxySettings("https://checkHostname");
+			Assert.assertEquals(1, proxyExample.size());
+			Assert.assertEquals("check hostname", proxyExample.get(0));
 
-			final List<Proxy> proxiesOther = pacScriptParser.discoverProxy("https://other.com");
-			Assert.assertEquals(1, proxiesOther.size());
-			Assert.assertNull(proxiesOther.get(0));
+			final List<String> proxyOther = pacScriptParser.discoverProxySettings("https://otherHostname");
+			Assert.assertEquals(1, proxyOther.size());
+			Assert.assertEquals("other hostname", proxyOther.get(0));
 
-			final List<Proxy> proxiesSimple = pacScriptParser.discoverProxy("hostname");
-			Assert.assertEquals(1, proxiesSimple.size());
-			Assert.assertEquals("HTTP @ proxyElseIf/<unresolved>:80", proxiesSimple.get(0).toString());
+			final List<String> proxySimple = pacScriptParser.discoverProxySettings("https://unknownHostname");
+			Assert.assertEquals(1, proxySimple.size());
+			Assert.assertEquals("no match", proxySimple.get(0));
+		} catch (final Exception e) {
+			e.printStackTrace();
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testAssignmentsAndOperators() {
+		try {
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_AssignmentsAndOperators.pac")));
+			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals("19", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
