@@ -44,7 +44,7 @@ public class Method {
 			}
 			returnValue += methodParameterName;
 		}
-		returnValue = methodName + "(" + returnValue + ") {";
+		returnValue = "function " + methodName + "(" + returnValue + ") {";
 		for (final Statement statement : statements) {
 			returnValue += "\n" + PacScriptParserUtilities.indentLines(statement.toString());
 		}

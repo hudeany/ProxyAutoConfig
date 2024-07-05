@@ -6,16 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 public class Expression implements Statement {
-	// TODO:
-	// Operator 'not' and '!='
 	private final static List<String> twoParameterOperators = Arrays.asList(new String[] {
 			"+", "-", "*", "/",
 			"&", "|", "&&", "||",
-			"==", ">", "<", ">=", "<="
+			"==", "!=", ">", "<", ">=", "<="
 	});
 
 	private final static List<String> unaryOperators = Arrays.asList(new String[] {
-			"++", "--"
+			"++", "--", "!"
 	});
 
 	private List<String> expressionTokens;
@@ -30,7 +28,7 @@ public class Expression implements Statement {
 			expression1 = new Expression(expressionTokens.subList(1, bracketEnd));
 			if (bracketEnd < expressionTokens.size() - 1) {
 				operator = expressionTokens.get(bracketEnd + 1);
-				expression2 = new Expression(expressionTokens.subList(1, bracketEnd));
+				expression2 = new Expression(expressionTokens.subList(bracketEnd + 2, expressionTokens.size()));
 			}
 		} else {
 			final int operatorIndex = PacScriptParserUtilities.indexOfOperatorOutsideOfBrackets(expressionTokens, twoParameterOperators);
@@ -71,6 +69,8 @@ public class Expression implements Statement {
 					return value;
 				} else if ("==".equals(operator) && result2 == null) {
 					return true;
+				} else if ("!".equals(operator) && result2 != null && result2 instanceof Boolean) {
+					return !(Boolean) result2;
 				} else if (operator != null) {
 					throw new RuntimeException("Unsupported operator: " + operator);
 				} else {
@@ -81,14 +81,14 @@ public class Expression implements Statement {
 					final int value = ((Integer) result1) + 1;
 					environmentVariables.put(expression1.getVariableName(), value);
 					return value;
-				} else if ("--".equals(operator)) {
+				} else if ("--".equals(operator) && result1 instanceof Integer) {
 					final int value = ((Integer) result1) - 1;
 					environmentVariables.put(expression2.getVariableName(), value);
 					return value;
 				} else if (operator != null) {
 					throw new RuntimeException("Unsupported operator: " + operator);
 				} else {
-					throw new RuntimeException("Unsupported expression found");
+					return result1;
 				}
 			} else {
 				if ("==".equals(operator)) {
@@ -102,6 +102,20 @@ public class Expression implements Statement {
 						return ((Float) result1) == (Float) result2;
 					}  else if (result1 instanceof Double && result2 instanceof Double) {
 						return ((Double) result1) == (Double) result2;
+					} else {
+						throw new RuntimeException("Unsupported parameters for operator: " + operator);
+					}
+				} else if ("!=".equals(operator)) {
+					if (result1 == result2) {
+						return false;
+					} else if (result1 instanceof String && result2 instanceof String) {
+						return !((String) result1).equals(result2);
+					} else if (result1 instanceof Integer && result2 instanceof Integer) {
+						return ((Integer) result1) != (Integer) result2;
+					}  else if (result1 instanceof Float && result2 instanceof Float) {
+						return ((Float) result1) != (Float) result2;
+					}  else if (result1 instanceof Double && result2 instanceof Double) {
+						return ((Double) result1) != (Double) result2;
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -284,7 +298,11 @@ public class Expression implements Statement {
 					throw new RuntimeException("Call of undefined method: " + currentToken);
 				}
 			} else {
-				if (environmentVariables.containsKey(currentToken)) {
+				if ("true".equals(currentToken)) {
+					return true;
+				} else if ("false".equals(currentToken)) {
+					return false;
+				} else if (environmentVariables.containsKey(currentToken)) {
 					return environmentVariables.get(currentToken);
 				} else if (currentToken.startsWith("\"") && currentToken.endsWith("\"")) {
 					return currentToken.substring(1, currentToken.length() - 1);
@@ -346,9 +364,15 @@ public class Expression implements Statement {
 			}
 			return returnValue;
 		} else {
-			String returnValue = expression1.toString();
+			String returnValue = "";
+			if (expression1 != null) {
+				returnValue = expression1.toString();
+			}
 			if (operator != null) {
-				returnValue += " " + operator;
+				if (expression1 != null) {
+					returnValue += " ";
+				}
+				returnValue += operator;
 			}
 			if (expression2 != null) {
 				returnValue = "(" + returnValue + " " + expression2.toString() + ")";

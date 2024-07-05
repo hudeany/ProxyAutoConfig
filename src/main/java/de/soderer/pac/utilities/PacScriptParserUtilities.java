@@ -169,7 +169,8 @@ public class PacScriptParserUtilities {
 							}
 						} else if (currentCharacter == ',' || currentCharacter == ';'
 								|| currentCharacter == '/' || currentCharacter == '*' || currentCharacter == '^'
-								|| currentCharacter == '>' || currentCharacter == '<' || currentCharacter == '%') {
+								|| currentCharacter == '>' || currentCharacter == '<' || currentCharacter == '%'
+								|| currentCharacter == '!') {
 							if (nextToken.length() > 0) {
 								tokens.add(nextToken);
 								nextToken = "";
@@ -193,6 +194,7 @@ public class PacScriptParserUtilities {
 							}
 							if (previousCharacter != null && (
 									'=' == previousCharacter
+									|| '!' == previousCharacter
 									|| '>' == previousCharacter
 									|| '<' == previousCharacter
 									|| '+' == previousCharacter
@@ -625,5 +627,14 @@ public class PacScriptParserUtilities {
 
 	public static String indentLines(final String text) {
 		return "\t" + text.replace("\n", "\n" + "\t");
+	}
+
+	public static List<String> replaceAliases(final List<String> tokens) {
+		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
+			if ("not".equals(tokens.get(tokenIndex))) {
+				tokens.set(tokenIndex, "!");
+			}
+		}
+		return tokens;
 	}
 }

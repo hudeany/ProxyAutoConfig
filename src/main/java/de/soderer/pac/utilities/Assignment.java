@@ -30,9 +30,9 @@ public class Assignment implements Statement {
 	@Override
 	public String toString() {
 		if (isLetDeclaration) {
-			return "let " + variableName + " = " + expression.toString() + ";\n";
+			return "let " + variableName + " = " + expression.toString() + ";";
 		} else {
-			return "var " + variableName + " = " + expression.toString() + ";\n";
+			return "var " + variableName + " = " + expression.toString() + ";";
 		}
 	}
 }

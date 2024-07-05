@@ -24,7 +24,7 @@ public class PacScriptParser {
 		pacScriptData = PacScriptParserUtilities.readPacData(pacUrl);
 	}
 
-	public PacScriptParser(String pacScriptData) throws Exception {
+	public PacScriptParser(final String pacScriptData) throws Exception {
 		if (pacScriptData.trim().toLowerCase().startsWith("http")) {
 			this.pacScriptData = PacScriptParserUtilities.readPacData(new URL(pacScriptData.trim()));
 		} else {
@@ -35,7 +35,9 @@ public class PacScriptParser {
 	public Map<String, Method> parsePacScript() {
 		final Map<String, Method> methodDefinitions = new HashMap<>();
 
-		final List<String> pacScriptTokens = PacScriptParserUtilities.tokenize(PacScriptParserUtilities.removeComments(pacScriptData));
+		List<String> pacScriptTokens = PacScriptParserUtilities.tokenize(PacScriptParserUtilities.removeComments(pacScriptData));
+
+		pacScriptTokens = PacScriptParserUtilities.replaceAliases(pacScriptTokens);
 
 		int tokenIndex = 0;
 		String nextToken = pacScriptTokens.get(tokenIndex);

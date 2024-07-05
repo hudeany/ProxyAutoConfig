@@ -98,4 +98,18 @@ public class PacTest {
 			Assert.fail(e.getMessage());
 		}
 	}
+
+	@Test
+	public void testNotOperator() {
+		try {
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_NotOperator.pac")));
+			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals("true", proxySettings.get(0));
+		} catch (final Exception e) {
+			e.printStackTrace();
+			Assert.fail(e.getMessage());
+		}
+	}
 }
