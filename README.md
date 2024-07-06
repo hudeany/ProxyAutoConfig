@@ -2,6 +2,8 @@
 Proxy-Auto-Config Parser and Interpreter
 
 A simple parser and interpreter for Javascript PAC (Proxy-Auto-Config) files in pure JAVA.
+PACs are basically JavaScript, but this interpreter does not fully support JavaScript.
+Especially JavaScript classes are not supported. But those are not utilized in PAC scripts.
 
 This is far from being a perfect Javascript interpreter, but it supports all needed functionality for using PAC files to detect the right proxy server settings for a given URL to call via HTTP proxy.
 
