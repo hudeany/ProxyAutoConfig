@@ -136,10 +136,11 @@ public class PacScriptParserUtilities {
 		return bytesCopied;
 	}
 
-	public static List<String> tokenize(final String pacScriptString) {
+	public static List<String> tokenize(final String pacScript) {
 		final int outsideStringLiteral = 0;
 		final int insideStringLiteral = 1;
 		int currentState = outsideStringLiteral;
+		final String pacScriptString = pacScript.replace("\r\n", "\n").replace("\r", "\n");
 		try (Scanner textScanner = new Scanner(pacScriptString).useDelimiter("")) {
 			final List<String> tokens = new ArrayList<>();
 
@@ -160,7 +161,7 @@ public class PacScriptParserUtilities {
 							}
 							tokens.add(currentCharString);
 							nextToken = "";
-						} else if (currentCharacter == '[' || currentCharacter == ']') { // TODO
+						} else if (currentCharacter == '[' || currentCharacter == ']') {
 							if (nextToken.length() > 0) {
 								tokens.add(nextToken);
 								nextToken = "";
