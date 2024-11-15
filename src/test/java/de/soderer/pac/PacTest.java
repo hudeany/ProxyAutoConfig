@@ -118,7 +118,6 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Array.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
-
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals("DIRECT", proxySettings.get(0));
 		} catch (final Exception e) {
