@@ -77,7 +77,14 @@ public class Loop implements Statement {
 
 	@Override
 	public String toString() {
-		String returnValue = "for (" + loopInit + ") {\n"; //TODO
+		String loopStepString = loopStep.toString();
+		if (loopStepString.endsWith(";")) {
+			loopStepString = loopStepString.substring(0, loopStepString.length() - 1);
+		}
+		if (loopStepString.startsWith("var ")) {
+			loopStepString = loopStepString.substring(4);
+		}
+		String returnValue = "for (" + loopInit.toString() + " " + loopCondition.toString() + "; " + loopStepString + ") {\n";
 		for (final Statement loopStatement : loopStatements) {
 			returnValue += PacScriptParserUtilities.indentLines(loopStatement.toString()) + "\n";
 		}

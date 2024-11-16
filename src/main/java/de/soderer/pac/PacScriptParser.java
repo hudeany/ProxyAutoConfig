@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -24,9 +25,7 @@ import de.soderer.pac.utilities.PacScriptParserUtilities;
 //	'*.aadrm.com'
 //]
 //
-//for(var i=0; i<bypassList.length; i++){
-//	bypassList[i];
-//}
+//array.length
 //
 //while (condition) {
 //  // code block to be executed
@@ -34,6 +33,7 @@ import de.soderer.pac.utilities.PacScriptParserUtilities;
 
 public class PacScriptParser {
 	private String pacScriptData = null;
+	private Map<String, Method> pacScriptMethods = null;
 
 	private final Map<String, List<String>> pacProxyCache = new HashMap<>();
 
@@ -187,7 +187,9 @@ public class PacScriptParser {
 
 	private List<String> discoverProxySettingsInternal(final String destinationUrl) {
 		final String hostname = PacScriptParserUtilities.getHostnameFromRequestString(destinationUrl);
-		final Map<String, Method> pacScriptMethods = parsePacScript();
+		if (pacScriptMethods == null) {
+			pacScriptMethods = parsePacScript();
+		}
 		final Map<String, Object> environmentVariables = new HashMap<>();
 		final List<Object> methodParameters = new ArrayList<>();
 		methodParameters.add(destinationUrl);
@@ -240,5 +242,22 @@ public class PacScriptParser {
 		final URI uri = new URI(url);
 		final String domain = uri.getHost();
 		return domain.startsWith("www.") ? domain.substring(4) : domain;
+	}
+
+	@Override
+	public String toString() {
+		if (pacScriptMethods == null) {
+			pacScriptMethods = parsePacScript();
+		}
+		String returnValue = "";
+		if (pacScriptMethods.containsKey("FindProxyForURL")) {
+			returnValue += pacScriptMethods.get("FindProxyForURL").toString() + "\n";
+		}
+		for (final Entry<String, Method> method : pacScriptMethods.entrySet()) {
+			if (!("FindProxyForURL").equals(method.getKey())) {
+				returnValue += method.getValue().toString() + "\n";
+			}
+		}
+		return returnValue;
 	}
 }
