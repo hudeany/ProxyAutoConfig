@@ -125,4 +125,17 @@ public class PacTest {
 			Assert.fail(e.getMessage());
 		}
 	}
+
+	@Test
+	public void testLoop() {
+		try {
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Loops.pac")));
+			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.assertEquals("DIRECT", proxySettings.get(0));
+		} catch (final Exception e) {
+			e.printStackTrace();
+			Assert.fail(e.getMessage());
+		}
+	}
 }

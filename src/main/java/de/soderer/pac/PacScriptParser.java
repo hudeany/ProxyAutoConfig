@@ -27,6 +27,10 @@ import de.soderer.pac.utilities.PacScriptParserUtilities;
 //for(var i=0; i<bypassList.length; i++){
 //	bypassList[i];
 //}
+//
+//while (condition) {
+//  // code block to be executed
+//}
 
 public class PacScriptParser {
 	private String pacScriptData = null;
