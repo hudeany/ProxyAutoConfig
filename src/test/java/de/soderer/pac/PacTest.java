@@ -25,6 +25,8 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Basic.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
+
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals(1, proxySettings.size());
 			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
@@ -39,6 +41,8 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_NoBlockBracket.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
+
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals(1, proxySettings.size());
 			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
@@ -53,6 +57,8 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Methods.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
+
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals(1, proxySettings.size());
 			Assert.assertEquals("PROXY 10.0.0.1:8080", proxySettings.get(0));
@@ -67,6 +73,7 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Conditions.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
 
 			final List<String> proxyExample = pacScriptParser.discoverProxySettings("https://checkHostname");
 			Assert.assertEquals(1, proxyExample.size());
@@ -90,6 +97,7 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_AssignmentsAndOperators.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals("19", proxySettings.get(0));
@@ -104,6 +112,7 @@ public class PacTest {
 		try {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_NotOperator.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals("true", proxySettings.get(0));
@@ -119,6 +128,7 @@ public class PacTest {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Array.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 			System.out.println(pacScriptParser.toString());
+
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals("DIRECT", proxySettings.get(0));
 		} catch (final Exception e) {
@@ -133,6 +143,7 @@ public class PacTest {
 			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Loops.pac")));
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 			System.out.println(pacScriptParser.toString());
+
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
 			Assert.assertEquals("DIRECT", proxySettings.get(0));
 		} catch (final Exception e) {

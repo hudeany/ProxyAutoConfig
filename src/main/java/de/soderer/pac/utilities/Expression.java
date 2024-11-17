@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import de.soderer.pac.utilities.exception.BreakLoopException;
+import de.soderer.pac.utilities.exception.ContinueLoopException;
+
 public class Expression implements Statement {
 	private final static List<String> twoParameterOperators = Arrays.asList(new String[] {
 			"+", "-", "*", "/",
@@ -451,7 +454,7 @@ public class Expression implements Statement {
 				String returnValue = "";
 				for (final String expressionToken : expressionTokens) {
 					if (returnValue.length() > 0) {
-						if (!returnValue.endsWith("(") && !returnValue.endsWith("[") && !expressionToken.equals("(") && !expressionToken.equals("]") && !expressionToken.equals(",")) {
+						if (!returnValue.endsWith("(") && !returnValue.endsWith("[") && !expressionToken.equals("(") && !expressionToken.equals(")") && !expressionToken.equals("]") && !expressionToken.equals(",")) {
 							returnValue += " ";
 						}
 					}
