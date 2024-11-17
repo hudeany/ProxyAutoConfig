@@ -430,14 +430,21 @@ public class Expression implements Statement {
 	@Override
 	public String toString() {
 		if (expressionTokens != null && !expressionTokens.isEmpty()) {
-			String returnValue = "";
-			for (final String expressionToken : expressionTokens) {
-				if (returnValue.length() > 0) {
-					returnValue += " ";
+			final String firstToken = expressionTokens.get(0);
+			if ("break".equals(firstToken)) {
+				return "break;";
+			} else if ("continue".equals(firstToken)) {
+				return "continue;";
+			} else {
+				String returnValue = "";
+				for (final String expressionToken : expressionTokens) {
+					if (returnValue.length() > 0) {
+						returnValue += " ";
+					}
+					returnValue += expressionToken;
 				}
-				returnValue += expressionToken;
+				return returnValue;
 			}
-			return returnValue;
 		} else {
 			String returnValue = "";
 			if (expression1 != null) {
