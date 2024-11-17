@@ -439,7 +439,9 @@ public class Expression implements Statement {
 				String returnValue = "";
 				for (final String expressionToken : expressionTokens) {
 					if (returnValue.length() > 0) {
-						returnValue += " ";
+						if (!returnValue.endsWith("(") && !returnValue.endsWith("[") && !expressionToken.equals("(") && !expressionToken.equals("]") && !expressionToken.equals(",")) {
+							returnValue += " ";
+						}
 					}
 					returnValue += expressionToken;
 				}
