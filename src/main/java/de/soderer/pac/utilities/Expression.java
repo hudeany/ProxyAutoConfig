@@ -360,7 +360,7 @@ public class Expression implements Statement {
 					final String arrayName = firstToken.substring(0, firstToken.length() - 7);
 					if (environmentVariables.containsKey(arrayName)) {
 						final Object arrayObject = environmentVariables.get(arrayName);
-						if (arrayObject instanceof List<?>) {
+						if (arrayObject != null && arrayObject instanceof List<?>) {
 							return ((List<?>) arrayObject).size();
 						} else {
 							throw new RuntimeException("Variable for length is not an array: " + firstToken);
