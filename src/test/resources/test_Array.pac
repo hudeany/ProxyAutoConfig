@@ -1,5 +1,5 @@
 function FindProxyForURL(url, host) {
-  testArray = [1, 1+1, 3];
+  const testArray = [1, 1+1, 3];
   if (testArray.length == 3) {
 	  if (testArray[get_2() - 1] == 2) {
 	    return "DIRECT";
