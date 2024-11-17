@@ -517,6 +517,10 @@ public class PacScriptParserUtilities {
 				}
 
 				statements.add(new Assignment(true, variableName, codeBlockTokens.subList(assignmentStart, tokenIndex)));
+			} else if ("break".equals(nextToken)) {
+				statements.add(new Expression(Collections.singletonList("break")));
+			} else if ("continue".equals(nextToken)) {
+				statements.add(new Expression(Collections.singletonList("continue")));
 			} else {
 				if (codeBlockTokens.size() > tokenIndex + 2 && "=".equals(codeBlockTokens.get(tokenIndex + 1))) {
 					final String variableName = codeBlockTokens.get(tokenIndex);

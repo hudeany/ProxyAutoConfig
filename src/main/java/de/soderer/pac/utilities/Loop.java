@@ -58,19 +58,27 @@ public class Loop implements Statement {
 	@Override
 	public Object execute(final Map<String, Object> environmentVariables, final Map<String, Method> definedMethods) {
 		loopInit.execute(environmentVariables, definedMethods);
-		while (true) {
-			final Object expressionResult = loopCondition.execute(environmentVariables, definedMethods);
-			if (!(expressionResult instanceof Boolean)) {
-				throw new RuntimeException("Unsupported loop init expression result type");
-			} else if ((Boolean) expressionResult) {
-				for (final Statement loopStatement : loopStatements) {
-					loopStatement.execute(environmentVariables, definedMethods);
-				}
+		try {
+			while (true) {
+				final Object expressionResult = loopCondition.execute(environmentVariables, definedMethods);
+				if (!(expressionResult instanceof Boolean)) {
+					throw new RuntimeException("Unsupported loop init expression result type");
+				} else if ((Boolean) expressionResult) {
+					for (final Statement loopStatement : loopStatements) {
+						try {
+							loopStatement.execute(environmentVariables, definedMethods);
+						} catch (@SuppressWarnings("unused") final ContinueLoopException e) {
+							break;
+						}
+					}
 
-				loopStep.execute(environmentVariables, definedMethods);
-			} else {
-				break;
+					loopStep.execute(environmentVariables, definedMethods);
+				} else {
+					break;
+				}
 			}
+		} catch (@SuppressWarnings("unused") final BreakLoopException e) {
+			// Do nothing, just exit the while loop
 		}
 		return null;
 	}

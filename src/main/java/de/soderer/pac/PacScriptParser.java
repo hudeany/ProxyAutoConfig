@@ -30,6 +30,9 @@ import de.soderer.pac.utilities.PacScriptParserUtilities;
 //while (condition) {
 //  // code block to be executed
 //}
+//
+//break
+//continue
 
 public class PacScriptParser {
 	private String pacScriptData = null;

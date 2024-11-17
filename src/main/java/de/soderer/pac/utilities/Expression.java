@@ -273,7 +273,11 @@ public class Expression implements Statement {
 			}
 		} else {
 			final String firstToken = expressionTokens.get(0);
-			if (expressionTokens.size() > 1 && firstToken.equals("[") && expressionTokens.get(expressionTokens.size() - 1).equals("]")) {
+			if ("break".equals(firstToken)) {
+				throw new BreakLoopException();
+			} else if ("continue".equals(firstToken)) {
+				throw new ContinueLoopException();
+			} else if (expressionTokens.size() > 1 && firstToken.equals("[") && expressionTokens.get(expressionTokens.size() - 1).equals("]")) {
 				final List<Object> array = new ArrayList<>();
 				final List<List<String>> arrayItemTokens = readArrayItems(expressionTokens.subList(1, expressionTokens.size() - 1));
 				for (final List<String> itemTokens : arrayItemTokens) {
