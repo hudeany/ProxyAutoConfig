@@ -151,4 +151,32 @@ public class PacTest {
 			Assert.fail(e.getMessage());
 		}
 	}
+
+	@Test
+	public void testConstError() {
+		try {
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Const_Error.pac")));
+			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
+
+			pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.fail("Missing expected exception");
+		} catch (final Exception e) {
+			Assert.assertTrue(e.getMessage().startsWith("Assignment to constant after declaration"));
+		}
+	}
+
+	@Test
+	public void testBasicError() {
+		try {
+			final String pacString = new String(PacScriptParserUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("test_Basic_Error.pac")));
+			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
+			System.out.println(pacScriptParser.toString());
+
+			pacScriptParser.discoverProxySettings("https://example.com");
+			Assert.fail("Missing expected exception");
+		} catch (final Exception e) {
+			Assert.assertTrue(e.getMessage().startsWith("Unexpected expression when expecting single value"));
+		}
+	}
 }

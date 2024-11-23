@@ -370,6 +370,8 @@ public class Expression implements Statement {
 					} else {
 						throw new RuntimeException("Undefined variable name in expression: " + firstToken);
 					}
+				} else if (expressionTokens.size() > 1) {
+					throw new RuntimeException("Unexpected expression when expecting single value");
 				} else {
 					try {
 						return Integer.parseInt(firstToken);
