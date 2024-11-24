@@ -469,7 +469,7 @@ public class Expression implements Statement {
 				returnValue = expression1.toString();
 			}
 			if (operator != null) {
-				if (expression1 != null) {
+				if (expression1 != null && !"++".equals(operator) && !"--".equals(operator)) {
 					returnValue += " ";
 				}
 				returnValue += operator;
@@ -478,7 +478,7 @@ public class Expression implements Statement {
 				}
 			}
 			if (expression2 != null) {
-				if (operator != null && "!".equals(operator)) {
+				if (operator != null && ("!".equals(operator) || "++".equals(operator) || "--".equals(operator))) {
 					returnValue = returnValue + expression2.toString() + ")";
 				} else {
 					returnValue = returnValue + " " + expression2.toString();
