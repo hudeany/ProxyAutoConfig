@@ -131,7 +131,63 @@ public class ProxyConfiguration {
 				final String urlDomain = getDomainFromUrl(url);
 				for (String nonProxyHost : nonProxyHosts.split("\\|")) {
 					nonProxyHost = nonProxyHost.trim();
-					if (urlDomain == null || urlDomain.equalsIgnoreCase(url)) {
+					if (urlDomain == null || urlDomain.equalsIgnoreCase(nonProxyHost) || urlDomain.toLowerCase().endsWith(nonProxyHost.toLowerCase())) {
+						ignoreProxy = true;
+						break;
+					}
+				}
+				if (!ignoreProxy) {
+					if (isNotBlank(proxyHost)) {
+						if (isNotBlank(proxyPort) && isNumber(proxyPort)) {
+							return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort)));
+						} else {
+							return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, 8080));
+						}
+					} else {
+						return Proxy.NO_PROXY;
+					}
+				} else {
+					return Proxy.NO_PROXY;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Environment proxy configuration is set operating system environment properties:<br />
+	 * set http.proxyHost=proxy.url.local
+	 * set -Dhttp.proxyPort=8080
+	 * set NO_PROXY=127.0.0.1,localhost'
+	 */
+	public static Proxy getEnvironmentProxy(final String url) {
+		final String proxyHostHttp = System.getProperty("HTTP_PROXY");
+		final String proxyHostHttps = System.getProperty("HTTPS_PROXY");
+		String proxyHost = proxyHostHttp;
+		if (url.toLowerCase().startsWith("https:")) {
+			proxyHost = proxyHostHttps;
+		}
+		if (isBlank(proxyHost)) {
+			return Proxy.NO_PROXY;
+		} else {
+			final String proxyPort = System.getProperty("http.proxyPort");
+			final String nonProxyHosts = System.getProperty("NO_PROXY");
+
+			if (isBlank(nonProxyHosts)) {
+				if (isNotBlank(proxyHost)) {
+					if (isNotBlank(proxyPort) && isNumber(proxyPort)) {
+						return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort)));
+					} else {
+						return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, 8080));
+					}
+				} else {
+					return Proxy.NO_PROXY;
+				}
+			} else {
+				boolean ignoreProxy = false;
+				final String urlDomain = getDomainFromUrl(url);
+				for (String nonProxyHost : nonProxyHosts.split("\\|,")) {
+					nonProxyHost = nonProxyHost.trim();
+					if (urlDomain == null || urlDomain.equalsIgnoreCase(nonProxyHost) || urlDomain.toLowerCase().endsWith(nonProxyHost.toLowerCase())) {
 						ignoreProxy = true;
 						break;
 					}
