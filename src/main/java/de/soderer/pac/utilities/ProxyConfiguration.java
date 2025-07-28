@@ -163,8 +163,14 @@ public class ProxyConfiguration {
 	 *  set NO_PROXY=127.0.0.1,localhost
 	 */
 	public static Proxy getEnvironmentProxy(final String url) {
-		final String proxyHostHttp = System.getenv("HTTP_PROXY");
-		final String proxyHostHttps = System.getenv("HTTPS_PROXY");
+		String proxyHostHttp = System.getenv("HTTP_PROXY");
+		if (proxyHostHttp == null) {
+			proxyHostHttp = System.getenv("http_proxy");
+		}
+		String proxyHostHttps = System.getenv("HTTPS_PROXY");
+		if (proxyHostHttps == null) {
+			proxyHostHttps = System.getenv("https_proxy");
+		}
 		String proxyHost = proxyHostHttp;
 		if (url.toLowerCase().startsWith("https:")) {
 			proxyHost = proxyHostHttps;
@@ -186,7 +192,10 @@ public class ProxyConfiguration {
 				proxyHost = proxyHost.substring(0, proxyHost.indexOf(":"));
 			}
 
-			final String nonProxyHosts = System.getenv("NO_PROXY");
+			String nonProxyHosts = System.getenv("NO_PROXY");
+			if (nonProxyHosts == null) {
+				nonProxyHosts = System.getenv("no_proxy");
+			}
 
 			if (isBlank(nonProxyHosts)) {
 				if (isNotBlank(proxyHost)) {
