@@ -13,6 +13,7 @@ public class ProxyConfiguration {
 	public enum ProxyConfigurationType {
 		None,
 		System,
+		Environment,
 		ProxyURL,
 		WPAD,
 		PACURL;
@@ -59,6 +60,8 @@ public class ProxyConfiguration {
 				return Proxy.NO_PROXY;
 			case System:
 				return getSystemProxy(url);
+			case Environment:
+				return getEnvironmentProxy(url);
 			case ProxyURL:
 				if (proxyOrPacUrl == null || proxyOrPacUrl.trim().length() == 0 || "DIRECT".equalsIgnoreCase(proxyOrPacUrl)) {
 					return Proxy.NO_PROXY;
@@ -155,9 +158,9 @@ public class ProxyConfiguration {
 
 	/**
 	 * Environment proxy configuration is set operating system environment properties:<br />
-	 * set http.proxyHost=proxy.url.local
-	 * set -Dhttp.proxyPort=8080
-	 * set NO_PROXY=127.0.0.1,localhost'
+	 *  set HTTP_PROXY=proxy.url.local:8080
+	 *  set HTTP_PROXY=other.proxy.url.local:8080
+	 *  set NO_PROXY=127.0.0.1,localhost
 	 */
 	public static Proxy getEnvironmentProxy(final String url) {
 		final String proxyHostHttp = System.getProperty("HTTP_PROXY");
@@ -169,7 +172,20 @@ public class ProxyConfiguration {
 		if (isBlank(proxyHost)) {
 			return Proxy.NO_PROXY;
 		} else {
-			final String proxyPort = System.getProperty("http.proxyPort");
+			String proxyPort = null;
+			if (proxyHost.toLowerCase().startsWith("http://")) {
+				proxyPort = "443";
+				proxyHost = proxyHost.substring(7);
+			}
+			if (proxyHost.toLowerCase().startsWith("https://")) {
+				proxyPort = "80";
+				proxyHost = proxyHost.substring(8);
+			}
+			if (proxyHost.contains(":")) {
+				proxyPort = proxyHost.substring(proxyHost.indexOf(":") + 1);
+				proxyHost = proxyHost.substring(0, proxyHost.indexOf(":"));
+			}
+
 			final String nonProxyHosts = System.getProperty("NO_PROXY");
 
 			if (isBlank(nonProxyHosts)) {
