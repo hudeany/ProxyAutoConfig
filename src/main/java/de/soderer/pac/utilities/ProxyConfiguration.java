@@ -108,7 +108,7 @@ public class ProxyConfiguration {
 	 * System proxy configuration is set via JVM properties on startup or via environment properties:<br />
 	 * java ... -Dhttp.proxyHost=proxy.url.local -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
 	 */
-	private static Proxy getSystemProxy(final String url) {
+	public static Proxy getSystemProxy(final String url) {
 		final String proxyHost = System.getProperty("http.proxyHost");
 		if (isBlank(proxyHost)) {
 			return Proxy.NO_PROXY;
