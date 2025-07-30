@@ -110,14 +110,28 @@ public class ProxyConfiguration {
 	/**
 	 * System proxy configuration is set via JVM properties on startup or via environment properties:<br />
 	 * java ... -Dhttp.proxyHost=proxy.url.local -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
+	 * java ... -Dhttps.proxyHost=proxy.url.local -Dhttps.proxyPort=8080 -Dhttps.nonProxyHosts='127.0.0.1|localhost'
 	 */
 	public static Proxy getSystemProxy(final String url) {
-		final String proxyHost = System.getProperty("http.proxyHost");
+		String proxyHost = System.getProperty("http.proxyHost");
+		String proxyPort = System.getProperty("http.proxyPort");
+		String nonProxyHosts = System.getProperty("http.nonProxyHosts");
+
+		if (url.toLowerCase().startsWith("https:")) {
+			if (System.getProperty("https.proxyHost") != null) {
+				proxyHost = System.getProperty("https.proxyHost");
+			}
+			if (System.getProperty("https.proxyPort") != null) {
+				proxyPort = System.getProperty("https.proxyPort");
+			}
+			if (System.getProperty("https.nonProxyHosts") != null) {
+				nonProxyHosts = System.getProperty("https.nonProxyHosts");
+			}
+		}
+
 		if (isBlank(proxyHost)) {
 			return Proxy.NO_PROXY;
 		} else {
-			final String proxyPort = System.getProperty("http.proxyPort");
-			final String nonProxyHosts = System.getProperty("http.nonProxyHosts");
 
 			if (isBlank(nonProxyHosts)) {
 				if (isNotBlank(proxyHost)) {
@@ -163,18 +177,22 @@ public class ProxyConfiguration {
 	 *  set NO_PROXY=127.0.0.1,localhost
 	 */
 	public static Proxy getEnvironmentProxy(final String url) {
-		String proxyHostHttp = System.getenv("HTTP_PROXY");
-		if (proxyHostHttp == null) {
-			proxyHostHttp = System.getenv("http_proxy");
+		String proxyHost = System.getenv("HTTP_PROXY");
+		if (proxyHost == null) {
+			proxyHost = System.getenv("http_proxy");
 		}
-		String proxyHostHttps = System.getenv("HTTPS_PROXY");
-		if (proxyHostHttps == null) {
-			proxyHostHttps = System.getenv("https_proxy");
-		}
-		String proxyHost = proxyHostHttp;
+
 		if (url.toLowerCase().startsWith("https:")) {
-			proxyHost = proxyHostHttps;
+			String proxyHostHttps = System.getenv("HTTPS_PROXY");
+			if (proxyHostHttps == null) {
+				proxyHostHttps = System.getenv("https_proxy");
+			}
+
+			if (proxyHostHttps != null) {
+				proxyHost = proxyHostHttps;
+			}
 		}
+
 		if (isBlank(proxyHost)) {
 			return Proxy.NO_PROXY;
 		} else {
