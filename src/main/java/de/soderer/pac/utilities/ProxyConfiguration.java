@@ -115,7 +115,7 @@ public class ProxyConfiguration {
 	public static Proxy getSystemProxy(final String url) {
 		String proxyHost = System.getProperty("http.proxyHost");
 		String proxyPort = System.getProperty("http.proxyPort");
-		String nonProxyHosts = System.getProperty("http.nonProxyHosts");
+		final String nonProxyHosts = System.getProperty("http.nonProxyHosts");
 
 		if (url.toLowerCase().startsWith("https:")) {
 			if (System.getProperty("https.proxyHost") != null) {
@@ -124,9 +124,8 @@ public class ProxyConfiguration {
 			if (System.getProperty("https.proxyPort") != null) {
 				proxyPort = System.getProperty("https.proxyPort");
 			}
-			if (System.getProperty("https.nonProxyHosts") != null) {
-				nonProxyHosts = System.getProperty("https.nonProxyHosts");
-			}
+			// The https protocol uses the same nonProxyHosts as http
+			// So there is only http.nonProxyHosts and no https.nonProxyHosts
 		}
 
 		if (isBlank(proxyHost)) {
@@ -146,9 +145,12 @@ public class ProxyConfiguration {
 			} else {
 				boolean ignoreProxy = false;
 				final String urlDomain = getDomainFromUrl(url);
-				for (String nonProxyHost : nonProxyHosts.split("\\|")) {
-					nonProxyHost = nonProxyHost.trim();
-					if (urlDomain == null || urlDomain.equalsIgnoreCase(nonProxyHost) || urlDomain.toLowerCase().endsWith(nonProxyHost.toLowerCase())) {
+				for (String nonProxyHostWithWildcard : nonProxyHosts.split("\\|")) {
+					nonProxyHostWithWildcard = nonProxyHostWithWildcard.trim();
+					if (urlDomain == null || urlDomain.equalsIgnoreCase(nonProxyHostWithWildcard)) {
+						ignoreProxy = true;
+						break;
+					} else if (hostnamePatternMatches(urlDomain, nonProxyHostWithWildcard)) {
 						ignoreProxy = true;
 						break;
 					}
@@ -275,5 +277,21 @@ public class ProxyConfiguration {
 
 	public static boolean isNumber(final String numberString) {
 		return Pattern.matches("[+|-]?[0-9]*(\\.[0-9]*)?([e|E][+|-]?[0-9]*)?", numberString);
+	}
+
+	public static boolean hostnamePatternMatches(final String hostname, final String hostnamePattern) {
+		final StringBuilder hostnamePatternEscaped = new StringBuilder();
+		for (final char c : hostnamePattern.toCharArray()) {
+			if (Character.isLetterOrDigit(c)) {
+				hostnamePatternEscaped.append(c);
+			} else if ('*' == c) {
+				hostnamePatternEscaped.append(".*");
+			} else {
+				hostnamePatternEscaped.append("\\");
+				hostnamePatternEscaped.append(c);
+			}
+		}
+
+		return Pattern.matches(hostnamePatternEscaped.toString().toLowerCase(), hostname.toLowerCase());
 	}
 }
