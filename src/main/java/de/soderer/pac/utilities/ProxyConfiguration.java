@@ -36,6 +36,10 @@ public class ProxyConfiguration {
 	private String proxyOrPacUrl;
 	private boolean searchByWpad = true;
 
+	public ProxyConfiguration(final ProxyConfigurationType proxyConfigurationType) {
+		this(proxyConfigurationType, null);
+	}
+
 	public ProxyConfiguration(final ProxyConfigurationType proxyConfigurationType, final String proxyOrPacUrl) {
 		if (proxyConfigurationType == null) {
 			this.proxyConfigurationType = ProxyConfigurationType.None;
@@ -109,8 +113,9 @@ public class ProxyConfiguration {
 
 	/**
 	 * System proxy configuration is set via JVM properties on startup or via environment properties:<br />
+	 * Watch out: http.nonProxyHosts is used for both protocal types<br />
 	 * java ... -Dhttp.proxyHost=proxy.url.local -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
-	 * java ... -Dhttps.proxyHost=proxy.url.local -Dhttps.proxyPort=8080 -Dhttps.nonProxyHosts='127.0.0.1|localhost'
+	 * java ... -Dhttps.proxyHost=proxy.url.local -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
 	 */
 	public static Proxy getSystemProxy(final String url) {
 		String proxyHost = System.getProperty("http.proxyHost");
