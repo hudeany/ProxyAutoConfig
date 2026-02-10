@@ -3,6 +3,7 @@ package de.soderer.pac.utilities;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Proxy;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -76,6 +77,13 @@ public class ProxyConfiguration {
 						proxyPort = proxyHost.substring(proxyHost.indexOf(":") + 1);
 						proxyHost = proxyHost.substring(0, proxyHost.indexOf(":"));
 					}
+
+					if (proxyHost.toLowerCase().startsWith("http://")) {
+						proxyHost = proxyHost.substring(7);
+					} else if(proxyHost.toLowerCase().startsWith("https://")) {
+						proxyHost = proxyHost.substring(8);
+					}
+
 					return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort)));
 				}
 			case WPAD:
@@ -90,7 +98,7 @@ public class ProxyConfiguration {
 				} else {
 					URL pacUrl;
 					try {
-						pacUrl = new URL(proxyOrPacUrl);
+						pacUrl = new URI(proxyOrPacUrl).toURL();
 					} catch (final MalformedURLException e) {
 						throw new RuntimeException("Invalid PAC url: " + proxyOrPacUrl, e);
 					}
@@ -111,13 +119,39 @@ public class ProxyConfiguration {
 		}
 	}
 
+	public String getProxyURL(final String url) throws Exception {
+		final Proxy proxy = getProxy(url);
+		return getProxyURL(proxy);
+	}
+
+	public static String getProxyURL(final Proxy proxy) {
+		final InetSocketAddress address = (InetSocketAddress) proxy.address();
+		final String host = address.getHostString();
+		final int port = address.getPort();
+		String protocol;
+		switch (proxy.type()) {
+			case HTTP:
+				protocol = "http";
+				break;
+			case SOCKS:
+				protocol = "socks";
+				break;
+			case DIRECT:
+				return null;
+			default:
+				protocol = "http";
+		}
+		return protocol + "://" + host + ":" + port;
+	}
+
 	/**
 	 * System proxy configuration is set via JVM properties on startup or via environment properties:<br />
 	 * Watch out: http.nonProxyHosts is used for both protocal types<br />
 	 * java ... -Dhttp.proxyHost=proxy.url.local -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
 	 * java ... -Dhttps.proxyHost=proxy.url.local -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts='127.0.0.1|localhost'
+	 * @throws Exception
 	 */
-	public static Proxy getSystemProxy(final String url) {
+	public static Proxy getSystemProxy(final String url) throws Exception {
 		String proxyHost = System.getProperty("http.proxyHost");
 		String proxyPort = System.getProperty("http.proxyPort");
 		final String nonProxyHosts = System.getProperty("http.nonProxyHosts");
@@ -182,8 +216,9 @@ public class ProxyConfiguration {
 	 *  set HTTP_PROXY=proxy.url.local:8080
 	 *  set HTTP_PROXY=other.proxy.url.local:8080
 	 *  set NO_PROXY=127.0.0.1,localhost
+	 * @throws Exception
 	 */
-	public static Proxy getEnvironmentProxy(final String url) {
+	public static Proxy getEnvironmentProxy(final String url) throws Exception {
 		String proxyHost = System.getenv("HTTP_PROXY");
 		if (proxyHost == null) {
 			proxyHost = System.getenv("http_proxy");
@@ -259,13 +294,13 @@ public class ProxyConfiguration {
 		}
 	}
 
-	private static String getDomainFromUrl(String url) {
+	private static String getDomainFromUrl(String url) throws Exception {
 		if (!url.startsWith("http") && !url.startsWith("https")) {
 			url = "http://" + url;
 		}
 		URL netUrl;
 		try {
-			netUrl = new URL(url);
+			netUrl = new URI(url).toURL();
 		} catch (@SuppressWarnings("unused") final MalformedURLException e) {
 			return null;
 		}
