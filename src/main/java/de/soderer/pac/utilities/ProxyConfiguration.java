@@ -240,11 +240,11 @@ public class ProxyConfiguration {
 		} else {
 			String proxyPort = null;
 			if (proxyHost.toLowerCase().startsWith("http://")) {
-				proxyPort = "443";
+				proxyPort = "80";
 				proxyHost = proxyHost.substring(7);
 			}
 			if (proxyHost.toLowerCase().startsWith("https://")) {
-				proxyPort = "80";
+				proxyPort = "443";
 				proxyHost = proxyHost.substring(8);
 			}
 			if (proxyHost.contains(":")) {
