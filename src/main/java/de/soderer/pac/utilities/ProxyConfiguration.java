@@ -73,15 +73,16 @@ public class ProxyConfiguration {
 				} else {
 					String proxyHost = proxyOrPacUrl;
 					String proxyPort = "8080";
-					if (proxyHost.contains(":")) {
-						proxyPort = proxyHost.substring(proxyHost.indexOf(":") + 1);
-						proxyHost = proxyHost.substring(0, proxyHost.indexOf(":"));
-					}
 
 					if (proxyHost.toLowerCase().startsWith("http://")) {
 						proxyHost = proxyHost.substring(7);
 					} else if(proxyHost.toLowerCase().startsWith("https://")) {
 						proxyHost = proxyHost.substring(8);
+					}
+
+					if (proxyHost.contains(":")) {
+						proxyPort = proxyHost.substring(proxyHost.indexOf(":") + 1);
+						proxyHost = proxyHost.substring(0, proxyHost.indexOf(":"));
 					}
 
 					return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort)));
