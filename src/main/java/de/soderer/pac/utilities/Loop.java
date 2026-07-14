@@ -86,6 +86,7 @@ public class Loop implements Statement {
 			loopInit.execute(context);
 			try {
 				while (true) {
+					context.getExecutionGuard().checkStep();
 					final Object expressionResult = loopCondition.execute(context);
 					if (!(expressionResult instanceof Boolean)) {
 						throw new RuntimeException("Unsupported loop init expression result type");
@@ -109,6 +110,7 @@ public class Loop implements Statement {
 		} else {
 			try {
 				while (true) {
+					context.getExecutionGuard().checkStep();
 					final Object expressionResult = loopCondition.execute(context);
 					if (!(expressionResult instanceof Boolean)) {
 						throw new RuntimeException("Unsupported loop init expression result type");

@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,8 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-
-import javax.net.ssl.HttpsURLConnection;
 
 import de.soderer.pac.utilities.Context;
 import de.soderer.pac.utilities.Method;
@@ -126,7 +125,9 @@ public class PacScriptParser {
 
 			for (final String pacUrlCandidate : pacUrlCandidates) {
 				try {
-					final HttpsURLConnection pacConnection = (HttpsURLConnection) new URL(pacUrlCandidate).openConnection();
+					final URLConnection pacConnection = new URL(pacUrlCandidate).openConnection();
+					pacConnection.setConnectTimeout(3_000);
+					pacConnection.setReadTimeout(3_000);
 					pacConnection.connect();
 				} catch (@SuppressWarnings("unused") final Exception e) {
 					continue;
@@ -184,11 +185,16 @@ public class PacScriptParser {
 			context.setDefinedMethod(pacScriptMethodEntry.getKey(), pacScriptMethodEntry.getValue());
 		}
 
+		final Method findProxyForUrlMethod = pacScriptMethods.get("FindProxyForURL");
+		if (findProxyForUrlMethod == null) {
+			throw new RuntimeException("PAC script does not define the required method 'FindProxyForURL'");
+		}
+
 		final List<Object> methodParameters = new ArrayList<>();
 		methodParameters.add(destinationUrl);
 		methodParameters.add(hostname);
 
-		final Object pacScriptMethodReturnValue = pacScriptMethods.get("FindProxyForURL").executeMethod(context, methodParameters);
+		final Object pacScriptMethodReturnValue = findProxyForUrlMethod.executeMethod(context, methodParameters);
 		if (pacScriptMethodReturnValue == null) {
 			return null;
 		} else if (pacScriptMethodReturnValue instanceof String) {
@@ -214,7 +220,7 @@ public class PacScriptParser {
 						try {
 							proxyPort = Integer.parseInt(proxyConfigurationString.substring(proxyConfigurationString.indexOf(":") + 1));
 						} catch (@SuppressWarnings("unused") final NumberFormatException e) {
-							throw new RuntimeException("Invalid port number for proxy url '" + proxyHost + "': " + proxyConfigurationString.indexOf(":" + 1));
+							throw new RuntimeException("Invalid port number for proxy url '" + proxyHost + "': " + proxyConfigurationString.substring(proxyConfigurationString.indexOf(":") + 1));
 						}
 					} else {
 						proxyHost = proxyConfigurationString;

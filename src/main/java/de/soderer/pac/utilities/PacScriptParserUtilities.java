@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,16 +15,16 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Stack;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import de.soderer.pac.utilities.Assignment.Scope;
 
 public class PacScriptParserUtilities {
 	public static String readPacData(final URL pacUrl) {
 		try {
-			final HttpsURLConnection pacConnection = (HttpsURLConnection) pacUrl.openConnection();
+			final URLConnection pacConnection = pacUrl.openConnection();
+			pacConnection.setConnectTimeout(10_000);
+			pacConnection.setReadTimeout(10_000);
 			pacConnection.connect();
-			try (InputStream pacInputStream = (InputStream) pacConnection.getContent()) {
+			try (InputStream pacInputStream = pacConnection.getInputStream()) {
 				final String pacData = new String(toByteArray(pacInputStream), StandardCharsets.UTF_8);
 				return pacData.replace("\r\n", "\n").replace("\r", "\n");
 			}

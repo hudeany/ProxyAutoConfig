@@ -6,9 +6,23 @@ import java.util.Map;
 import java.util.Set;
 
 public class Context {
-	Map<String, Method> definedMethods = new HashMap<>();
-	Map<String, Object> environmentVariables = new HashMap<>();
-	Set<String> constVariables = new HashSet<>();
+	private Map<String, Method> definedMethods = new HashMap<>();
+	private Map<String, Object> environmentVariables = new HashMap<>();
+	private Set<String> constVariables = new HashSet<>();
+
+	private final ExecutionGuard executionGuard;
+
+	public Context() {
+		this(new ExecutionGuard());
+	}
+
+	public Context(final ExecutionGuard executionGuard) {
+		this.executionGuard = executionGuard;
+	}
+
+	public ExecutionGuard getExecutionGuard() {
+		return executionGuard;
+	}
 
 	public Method getDefinedMethod(final String methodName) {
 		return definedMethods.get(methodName);
@@ -43,7 +57,9 @@ public class Context {
 	}
 
 	public Context createSubContext() {
-		final Context subContext = new Context();
+		// Shared reference of executionGuard by intention
+		final Context subContext = new Context(executionGuard);
+
 		subContext.definedMethods = new HashMap<>(definedMethods);
 		subContext.environmentVariables = new HashMap<>(environmentVariables);
 		subContext.constVariables = new HashSet<>(constVariables);

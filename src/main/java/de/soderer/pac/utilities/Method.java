@@ -18,19 +18,24 @@ public class Method {
 	}
 
 	public Object executeMethod(final Context context, final List<Object> methodParameters) {
-		final Context methodContext = context.createSubContext();
-		for (int i = 0; i < methodParameterNames.size(); i++) {
-			final String methodParameterName = methodParameterNames.get(i);
-			final Object methodParameter = methodParameters.get(i);
-			methodContext.setEnvironmentVariable(methodParameterName, methodParameter);
-		}
-		for (final Statement statement : statements) {
-			final Object result = statement.execute(methodContext);
-			if (result != null) {
-				return result;
+		context.getExecutionGuard().enterMethodCall();
+		try {
+			final Context methodContext = context.createSubContext();
+			for (int i = 0; i < methodParameterNames.size(); i++) {
+				final String methodParameterName = methodParameterNames.get(i);
+				final Object methodParameter = methodParameters.get(i);
+				methodContext.setEnvironmentVariable(methodParameterName, methodParameter);
 			}
+			for (final Statement statement : statements) {
+				final Object result = statement.execute(methodContext);
+				if (result != null) {
+					return result;
+				}
+			}
+			return null;
+		} finally {
+			context.getExecutionGuard().leaveMethodCall();
 		}
-		return null;
 	}
 
 	@Override
