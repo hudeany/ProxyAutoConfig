@@ -9,7 +9,9 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -20,10 +22,12 @@ import de.soderer.pac.utilities.Method;
 import de.soderer.pac.utilities.PacScriptParserUtilities;
 
 public class PacScriptParser {
+	private static final int DEFAULT_MAX_PAC_PROXY_CACHE_ENTRIES = 1000;
+
 	private String pacScriptData = null;
 	private Map<String, Method> pacScriptMethods = null;
 
-	private final Map<String, List<String>> pacProxyCache = new HashMap<>();
+	private final Map<String, List<String>> pacProxyCache;
 
 	/**
 	 * Default: CacheByDomain
@@ -35,15 +39,47 @@ public class PacScriptParser {
 	}
 
 	public PacScriptParser(final URL pacUrl) {
+		this(pacUrl, DEFAULT_MAX_PAC_PROXY_CACHE_ENTRIES);
+	}
+
+	public PacScriptParser(final URL pacUrl, final int maxPacProxyCacheEntries) {
 		pacScriptData = PacScriptParserUtilities.readPacData(pacUrl);
+		pacProxyCache = createBoundedCache(maxPacProxyCacheEntries);
 	}
 
 	public PacScriptParser(final String pacScriptData) throws Exception {
+		this(pacScriptData, DEFAULT_MAX_PAC_PROXY_CACHE_ENTRIES);
+	}
+
+	public PacScriptParser(final String pacScriptData, final int maxPacProxyCacheEntries) throws Exception {
 		if (pacScriptData.trim().toLowerCase().startsWith("http")) {
 			this.pacScriptData = PacScriptParserUtilities.readPacData(new URL(pacScriptData.trim()));
 		} else {
 			this.pacScriptData = pacScriptData;
 		}
+		pacProxyCache = createBoundedCache(maxPacProxyCacheEntries);
+	}
+
+	/**
+	 * Creates a size-bounded, thread-safe LRU cache: once maxEntries is
+	 * exceeded, the least-recently-used entry (by access, not just insertion)
+	 * is evicted automatically on the next put().
+	 *
+	 * Synchronized because a single PacScriptParser instance (and therefore
+	 * this cache) may be shared and accessed concurrently across multiple
+	 * threads, e.g. when cached by ProxyConfiguration for repeated getProxy()
+	 * calls.
+	 */
+	private static Map<String, List<String>> createBoundedCache(final int maxEntries) {
+		final Map<String, List<String>> lruMap = new LinkedHashMap<>(16, 0.75f, true) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected boolean removeEldestEntry(final Map.Entry<String, List<String>> eldest) {
+				return size() > maxEntries;
+			}
+		};
+		return Collections.synchronizedMap(lruMap);
 	}
 
 	public Map<String, Method> parsePacScript() {
@@ -170,21 +206,25 @@ public class PacScriptParser {
 		if (cacheType == CacheType.None) {
 			return discoverProxySettingsInternal(destinationUrl);
 		} else if (cacheType == CacheType.CacheByFullUrl) {
-			if (pacProxyCache.containsKey(destinationUrl)) {
-				return pacProxyCache.get(destinationUrl);
-			} else {
-				final List<String> result = discoverProxySettingsInternal(destinationUrl);
-				pacProxyCache.put(destinationUrl, result);
-				return result;
+			synchronized (pacProxyCache) {
+				if (pacProxyCache.containsKey(destinationUrl)) {
+					return pacProxyCache.get(destinationUrl);
+				} else {
+					final List<String> result = discoverProxySettingsInternal(destinationUrl);
+					pacProxyCache.put(destinationUrl, result);
+					return result;
+				}
 			}
 		} else {
 			final String domain = getDomainFromUrl(destinationUrl);
-			if (pacProxyCache.containsKey(domain)) {
-				return pacProxyCache.get(domain);
-			} else {
-				final List<String> result = discoverProxySettingsInternal(destinationUrl);
-				pacProxyCache.put(domain, result);
-				return result;
+			synchronized (pacProxyCache) {
+				if (pacProxyCache.containsKey(domain)) {
+					return pacProxyCache.get(domain);
+				} else {
+					final List<String> result = discoverProxySettingsInternal(destinationUrl);
+					pacProxyCache.put(domain, result);
+					return result;
+				}
 			}
 		}
 	}
