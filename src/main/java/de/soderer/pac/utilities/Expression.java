@@ -8,11 +8,16 @@ import de.soderer.pac.utilities.exception.BreakLoopException;
 import de.soderer.pac.utilities.exception.ContinueLoopException;
 
 public class Expression implements Statement {
-	private final static List<String> twoParameterOperators = Arrays.asList(new String[] {
-			"+", "-", "*", "/",
-			"&", "|", "&&", "||",
-			"==", "!=", ">", "<", ">=", "<="
-	});
+	private final static List<List<String>> PRECEDENCE_LEVELS = Arrays.asList(
+			Arrays.asList("||"),
+			Arrays.asList("&&"),
+			Arrays.asList("|"),
+			Arrays.asList("&"),
+			Arrays.asList("==", "!="),
+			Arrays.asList("<", ">", "<=", ">="),
+			Arrays.asList("+", "-"),
+			Arrays.asList("*", "/", "%")
+	);
 
 	private final static List<String> unaryOperators = Arrays.asList(new String[] {
 			"++", "--", "!"
@@ -45,7 +50,14 @@ public class Expression implements Statement {
 				throw new RuntimeException("Unsupported expression with operator for array found: " + expressionTokens.get(bracketEnd + 1));
 			}
 		} else {
-			final int operatorIndex = PacScriptParserUtilities.indexOfOperatorOutsideOfBrackets(expressionTokens, twoParameterOperators);
+			int operatorIndex = -1;
+			for (final List<String> precedenceLevel : PRECEDENCE_LEVELS) {
+				operatorIndex = PacScriptParserUtilities.lastIndexOfOperatorOutsideOfBrackets(expressionTokens, precedenceLevel);
+				if (operatorIndex > -1) {
+					break;
+				}
+			}
+
 			if (operatorIndex > -1) {
 				expression1 = new Expression(expressionTokens.subList(0, operatorIndex));
 				operator = expressionTokens.get(operatorIndex);
@@ -120,10 +132,8 @@ public class Expression implements Statement {
 						return ((String) result1).equals(result2);
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) == (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) == (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) == (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() == ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -134,10 +144,8 @@ public class Expression implements Statement {
 						return !((String) result1).equals(result2);
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) != (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) != (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) != (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() != ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -146,10 +154,8 @@ public class Expression implements Statement {
 						return false;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) > (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) > (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) > (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() > ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -158,10 +164,8 @@ public class Expression implements Statement {
 						return false;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) < (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) < (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) < (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() < ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -170,10 +174,8 @@ public class Expression implements Statement {
 						return false;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) >= (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) >= (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) >= (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() >= ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -182,10 +184,8 @@ public class Expression implements Statement {
 						return false;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) <= (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) <= (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) <= (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() <= ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -194,10 +194,8 @@ public class Expression implements Statement {
 						return ((String) result1) + (String) result2;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) + (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) + (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) + (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() + ((Number) result2).doubleValue();
 					} else if (result1 instanceof String) {
 						return result1 + result2.toString();
 					} else if (result2 instanceof String) {
@@ -208,40 +206,32 @@ public class Expression implements Statement {
 				} else if ("-".equals(operator)) {
 					if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) - (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) - (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) - (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() - ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
 				} else if ("*".equals(operator)) {
 					if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) * (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) * (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) * (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() * ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
 				} else if ("/".equals(operator)) {
 					if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) / (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) / (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) / (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() / ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
 				} else if ("%".equals(operator)) {
 					if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) % (Integer) result2;
-					}  else if (result1 instanceof Float && result2 instanceof Float) {
-						return ((Float) result1) % (Float) result2;
-					}  else if (result1 instanceof Double && result2 instanceof Double) {
-						return ((Double) result1) % (Double) result2;
+					} else if (bothNumbers(result1, result2)) {
+						return ((Number) result1).doubleValue() % ((Number) result2).doubleValue();
 					} else {
 						throw new RuntimeException("Unsupported parameters for operator: " + operator);
 					}
@@ -486,5 +476,9 @@ public class Expression implements Statement {
 			}
 			return returnValue;
 		}
+	}
+
+	private static boolean bothNumbers(final Object a, final Object b) {
+		return a instanceof Number && b instanceof Number;
 	}
 }

@@ -758,4 +758,20 @@ public class PacScriptParserUtilities {
 		}
 		return tokens;
 	}
+
+	public static int lastIndexOfOperatorOutsideOfBrackets(final List<String> tokens, final List<String> operators) {
+		int openBrackets = 0;
+		int lastMatch = -1;
+		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
+			final String token = tokens.get(tokenIndex);
+			if ("(".equals(token) || "[".equals(token)) {
+				openBrackets++;
+			} else if (")".equals(token) || "]".equals(token)) {
+				openBrackets--;
+			} else if (openBrackets == 0 && operators.contains(token)) {
+				lastMatch = tokenIndex;
+			}
+		}
+		return lastMatch;
+	}
 }

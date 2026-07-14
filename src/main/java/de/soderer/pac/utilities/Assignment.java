@@ -18,6 +18,8 @@ public class Assignment implements Statement {
 	private final String variableName;
 	private final Expression expression;
 
+	private boolean alreadyExecutedOnce = false;
+
 	public Assignment(final String variableName, final List<String> expressionTokens) {
 		this(Scope.VAR, variableName, expressionTokens);
 	}
@@ -30,11 +32,11 @@ public class Assignment implements Statement {
 
 	@Override
 	public Object execute(final Context context) {
-		if (scope == Scope.CONST && context.hasVariable(variableName)) {
+		if (scope == Scope.CONST && context.hasVariable(variableName) && !alreadyExecutedOnce) {
 			throw new RuntimeException("Multiple declaration of variablename by 'const' keyword: " + variableName);
-		} else if (context.isConstVariable(variableName)) {
+		} else if (context.isConstVariable(variableName) && !alreadyExecutedOnce) {
 			throw new RuntimeException("Assignment to constant after declaration: " + variableName);
-		} else if (scope == Scope.LET && context.hasVariable(variableName)) {
+		} else if (scope == Scope.LET && context.hasVariable(variableName) && !alreadyExecutedOnce) {
 			throw new RuntimeException("Multiple declaration of variablename by 'let' keyword: " + variableName);
 		} else {
 			// Expression must be executed always for concurrency results of unary operators
@@ -43,6 +45,7 @@ public class Assignment implements Statement {
 			if (scope == Scope.CONST) {
 				context.setConstVariable(variableName);
 			}
+			alreadyExecutedOnce = true;
 			return null;
 		}
 	}

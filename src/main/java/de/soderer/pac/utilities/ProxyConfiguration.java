@@ -131,22 +131,26 @@ public class ProxyConfiguration {
 
 	public static String getProxyURL(final Proxy proxy) {
 		final InetSocketAddress address = (InetSocketAddress) proxy.address();
-		final String host = address.getHostString();
-		final int port = address.getPort();
-		String protocol;
-		switch (proxy.type()) {
-			case HTTP:
-				protocol = "http";
-				break;
-			case SOCKS:
-				protocol = "socks";
-				break;
-			case DIRECT:
-				return null;
-			default:
-				protocol = "http";
+		if (address == null) {
+			return null;
+		} else {
+			final String host = address.getHostString();
+			final int port = address.getPort();
+			String protocol;
+			switch (proxy.type()) {
+				case HTTP:
+					protocol = "http";
+					break;
+				case SOCKS:
+					protocol = "socks";
+					break;
+				case DIRECT:
+					return null;
+				default:
+					protocol = "http";
+			}
+			return protocol + "://" + host + ":" + port;
 		}
-		return protocol + "://" + host + ":" + port;
 	}
 
 	/**
@@ -275,7 +279,7 @@ public class ProxyConfiguration {
 			} else {
 				boolean ignoreProxy = false;
 				final String urlDomain = getDomainFromUrl(url);
-				for (String nonProxyHost : nonProxyHosts.split("\\|,")) {
+				for (String nonProxyHost : nonProxyHosts.split("\\||,")) {
 					nonProxyHost = nonProxyHost.trim();
 					if (urlDomain == null || urlDomain.equalsIgnoreCase(nonProxyHost) || urlDomain.toLowerCase().endsWith(nonProxyHost.toLowerCase())) {
 						ignoreProxy = true;

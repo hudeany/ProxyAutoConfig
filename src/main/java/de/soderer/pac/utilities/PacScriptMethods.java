@@ -300,8 +300,31 @@ public class PacScriptMethods {
 				// Do nothing
 			}
 		}
-		Collections.sort(parsedAddresses, null);
-		return ipAddressList;
+
+		parsedAddresses.sort((a, b) -> {
+			final byte[] ba = a.getAddress();
+			final byte[] bb = b.getAddress();
+			if (ba.length != bb.length) {
+				// IPv4 (4 Bytes) vor IPv6 (16 Bytes)
+				return Integer.compare(ba.length, bb.length);
+			}
+			for (int i = 0; i < ba.length; i++) {
+				final int diff = (ba[i] & 0xFF) - (bb[i] & 0xFF);
+				if (diff != 0) {
+					return diff;
+				}
+			}
+			return 0;
+		});
+
+		final StringBuilder result = new StringBuilder();
+		for (final InetAddress address : parsedAddresses) {
+			if (result.length() > 0) {
+				result.append(";");
+			}
+			result.append(address.getHostAddress());
+		}
+		return result.toString();
 	}
 
 	public static String getClientVersion() {
@@ -385,7 +408,7 @@ public class PacScriptMethods {
 
 	private static int indexOfCaseInsensitive(final List<String> data, final String item) {
 		for (int i = 0; i < data.size(); i++) {
-			final String dataItem = data.get(0);
+			final String dataItem = data.get(i);
 			if (dataItem == item) {
 				return i;
 			} else if (dataItem != null && dataItem.equalsIgnoreCase(item)) {

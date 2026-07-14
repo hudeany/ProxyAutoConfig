@@ -1,14 +1,14 @@
 package de.soderer.pac.utilities;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class Context {
 	Map<String, Method> definedMethods = new HashMap<>();
 	Map<String, Object> environmentVariables = new HashMap<>();
-	List<String> constVariables = new ArrayList<>();
+	Set<String> constVariables = new HashSet<>();
 
 	public Method getDefinedMethod(final String methodName) {
 		return definedMethods.get(methodName);
@@ -46,7 +46,7 @@ public class Context {
 		final Context subContext = new Context();
 		subContext.definedMethods = new HashMap<>(definedMethods);
 		subContext.environmentVariables = new HashMap<>(environmentVariables);
-		subContext.constVariables = new ArrayList<>(constVariables);
+		subContext.constVariables = new HashSet<>(constVariables);
 		return subContext;
 	}
 }
