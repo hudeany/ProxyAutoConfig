@@ -38,6 +38,10 @@ public class ProxyConfiguration {
 	private boolean searchByWpad = true;
 	private boolean allowInsecureHttpWpad = false;
 
+	private volatile PacScriptParser cachedPacScriptParser;
+	private long pacScriptCacheTimestamp = 0;
+	private long pacScriptCacheMaxAgeMillis = -1; // -1 = unlimited
+
 	public ProxyConfiguration(final ProxyConfigurationType proxyConfigurationType) {
 		this(proxyConfigurationType, null);
 	}
@@ -70,6 +74,54 @@ public class ProxyConfiguration {
 	public ProxyConfiguration setAllowInsecureHttpWpad(final boolean allowInsecureHttpWpad) {
 		this.allowInsecureHttpWpad = allowInsecureHttpWpad;
 		return this;
+	}
+
+	/**
+	 * Sets an optional maximum age for the cached, parsed PAC script (only
+	 * relevant for ProxyConfigurationType.PACURL and WPAD). After this many
+	 * milliseconds, the PAC script is re-downloaded and re-parsed on the next
+	 * getProxy() call, in case the remote PAC file has changed in the meantime.
+	 * Default is -1 (cache forever once loaded, until resetPacScriptCache() is
+	 * called manually).
+	 */
+	public ProxyConfiguration setPacScriptCacheMaxAge(final long maxAgeMillis) {
+		pacScriptCacheMaxAgeMillis = maxAgeMillis;
+		return this;
+	}
+
+	/**
+	 * Forces the next getProxy() call to re-download and re-parse the PAC
+	 * script, discarding the cached parser instance and its internal
+	 * proxy-by-domain result cache.
+	 */
+	public synchronized void resetPacScriptCache() {
+		cachedPacScriptParser = null;
+	}
+
+	private PacScriptParser getOrCreatePacScriptParser() throws Exception {
+		PacScriptParser parser = cachedPacScriptParser;
+		if (parser == null || isPacScriptCacheExpired()) {
+			synchronized (this) {
+				parser = cachedPacScriptParser;
+				if (parser == null || isPacScriptCacheExpired()) {
+					final URL pacUrl;
+					try {
+						pacUrl = new URI(proxyOrPacUrl).toURL();
+					} catch (final MalformedURLException e) {
+						throw new RuntimeException("Invalid PAC url: " + proxyOrPacUrl, e);
+					}
+					parser = new PacScriptParser(pacUrl);
+					cachedPacScriptParser = parser;
+					pacScriptCacheTimestamp = System.currentTimeMillis();
+				}
+			}
+		}
+		return parser;
+	}
+
+	private boolean isPacScriptCacheExpired() {
+		return pacScriptCacheMaxAgeMillis >= 0
+				&& (System.currentTimeMillis() - pacScriptCacheTimestamp) > pacScriptCacheMaxAgeMillis;
 	}
 
 	public Proxy getProxy(final String url) throws Exception {
@@ -110,14 +162,8 @@ public class ProxyConfiguration {
 				if (proxyOrPacUrl == null || proxyOrPacUrl.trim().length() == 0) {
 					return Proxy.NO_PROXY;
 				} else {
-					URL pacUrl;
 					try {
-						pacUrl = new URI(proxyOrPacUrl).toURL();
-					} catch (final MalformedURLException e) {
-						throw new RuntimeException("Invalid PAC url: " + proxyOrPacUrl, e);
-					}
-					try {
-						final List<Proxy> multipleAllowedProxySettingsForThisUrl = new PacScriptParser(pacUrl).discoverProxy(url);
+						final List<Proxy> multipleAllowedProxySettingsForThisUrl = getOrCreatePacScriptParser().discoverProxy(url);
 						if (multipleAllowedProxySettingsForThisUrl == null || multipleAllowedProxySettingsForThisUrl.isEmpty()) {
 							return Proxy.NO_PROXY;
 						} else {
@@ -129,7 +175,7 @@ public class ProxyConfiguration {
 							}
 						}
 					} catch (final Exception e) {
-						throw new Exception("Cannot find proxy configuration for URL '" + url + "' by using PAC file '" + pacUrl + "': " + e.getMessage(), e);
+						throw new Exception("Cannot find proxy configuration for URL '" + url + "' by using PAC file '" + proxyOrPacUrl + "': " + e.getMessage(), e);
 					}
 				}
 			default:
