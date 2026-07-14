@@ -103,16 +103,20 @@ public class ProxyConfiguration {
 					} catch (final MalformedURLException e) {
 						throw new RuntimeException("Invalid PAC url: " + proxyOrPacUrl, e);
 					}
-					final List<Proxy> multipleAllowedProxySettingsForThisUrl = new PacScriptParser(pacUrl).discoverProxy(url);
-					if (multipleAllowedProxySettingsForThisUrl == null || multipleAllowedProxySettingsForThisUrl.isEmpty()) {
-						return Proxy.NO_PROXY;
-					} else {
-						final Proxy proxy = multipleAllowedProxySettingsForThisUrl.get(0);
-						if (proxy == null) {
+					try {
+						final List<Proxy> multipleAllowedProxySettingsForThisUrl = new PacScriptParser(pacUrl).discoverProxy(url);
+						if (multipleAllowedProxySettingsForThisUrl == null || multipleAllowedProxySettingsForThisUrl.isEmpty()) {
 							return Proxy.NO_PROXY;
 						} else {
-							return proxy;
+							final Proxy proxy = multipleAllowedProxySettingsForThisUrl.get(0);
+							if (proxy == null) {
+								return Proxy.NO_PROXY;
+							} else {
+								return proxy;
+							}
 						}
+					} catch (final Exception e) {
+						throw new Exception("Cannot find proxy configuration for URL '" + url + "' by using PAC file '" + pacUrl + "': " + e.getMessage(), e);
 					}
 				}
 			default:
