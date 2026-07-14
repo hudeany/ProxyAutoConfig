@@ -104,6 +104,26 @@ public class PacScriptParser {
 	}
 
 	public static String findPacFileUrlByWpad() {
+		return findPacFileUrlByWpad(false);
+	}
+
+	/**
+	 * Attempts to discover a PAC file URL via WPAD (Web Proxy Auto-Discovery).
+	 *
+	 * SECURITY WARNING: WPAD is a well-known attack vector. Any device on the
+	 * local network (or a compromised DHCP/DNS server) can potentially answer
+	 * WPAD requests and serve a malicious PAC script, allowing an attacker to
+	 * redirect some or all of the application's traffic through a proxy under
+	 * their control (a classic man-in-the-middle setup). This method performs
+	 * no authenticity or integrity verification of the discovered PAC file.
+	 *
+	 * By default, only the HTTPS-based candidate is attempted. Pass
+	 * allowInsecureHttpWpad = true only if you understand and accept the risk
+	 * of unauthenticated, unencrypted PAC file discovery over plain HTTP.
+	 *
+	 * @param allowInsecureHttpWpad whether to also try plain-HTTP wpad.dat candidates
+	 */
+	public static String findPacFileUrlByWpad(final boolean allowInsecureHttpWpad) {
 		try {
 			final String fqdnAddress = InetAddress.getLocalHost().getCanonicalHostName();
 			String fullDomain;
@@ -117,10 +137,12 @@ public class PacScriptParser {
 			final List<String> pacUrlCandidates = new ArrayList<>();
 			pacUrlCandidates.add("https://proxypac." + fullDomain + "/proxy.pac");
 
-			// Exclude TLD domain like 'com' from pacUrlCandidates
-			for (int i = 0; i < domainParts.length - 1; i++) {
-				final String subDomain = PacScriptParserUtilities.join(Arrays.copyOfRange(domainParts, i, domainParts.length), ".");
-				pacUrlCandidates.add("http://wpad." + subDomain + "/wpad.dat");
+			if (allowInsecureHttpWpad) {
+				// Exclude TLD domain like 'com' from pacUrlCandidates
+				for (int i = 0; i < domainParts.length - 1; i++) {
+					final String subDomain = PacScriptParserUtilities.join(Arrays.copyOfRange(domainParts, i, domainParts.length), ".");
+					pacUrlCandidates.add("http://wpad." + subDomain + "/wpad.dat");
+				}
 			}
 
 			for (final String pacUrlCandidate : pacUrlCandidates) {

@@ -36,6 +36,7 @@ public class ProxyConfiguration {
 	private final ProxyConfigurationType proxyConfigurationType;
 	private String proxyOrPacUrl;
 	private boolean searchByWpad = true;
+	private boolean allowInsecureHttpWpad = false;
 
 	public ProxyConfiguration(final ProxyConfigurationType proxyConfigurationType) {
 		this(proxyConfigurationType, null);
@@ -57,6 +58,18 @@ public class ProxyConfiguration {
 
 	public String getProxyOrPacUrl() {
 		return proxyOrPacUrl;
+	}
+
+	/**
+	 * Enables the plain-HTTP WPAD fallback (http://wpad.<domain>/wpad.dat) in
+	 * addition to the HTTPS candidate. Disabled by default because it allows
+	 * unauthenticated, unencrypted PAC file discovery, which is a well-known
+	 * man-in-the-middle vector. Only enable this if you understand and accept
+	 * that risk (e.g. in a trusted, controlled corporate network).
+	 */
+	public ProxyConfiguration setAllowInsecureHttpWpad(final boolean allowInsecureHttpWpad) {
+		this.allowInsecureHttpWpad = allowInsecureHttpWpad;
+		return this;
 	}
 
 	public Proxy getProxy(final String url) throws Exception {
@@ -89,7 +102,7 @@ public class ProxyConfiguration {
 				}
 			case WPAD:
 				if ((proxyOrPacUrl == null || proxyOrPacUrl.trim().length() == 0) && searchByWpad) {
-					proxyOrPacUrl = PacScriptParser.findPacFileUrlByWpad();
+					proxyOrPacUrl = PacScriptParser.findPacFileUrlByWpad(allowInsecureHttpWpad);
 					searchByWpad = false;
 				}
 				//$FALL-THROUGH$

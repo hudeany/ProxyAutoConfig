@@ -18,6 +18,8 @@ import java.util.Stack;
 import de.soderer.pac.utilities.Assignment.Scope;
 
 public class PacScriptParserUtilities {
+	private static final int MAX_PAC_SCRIPT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 	public static String readPacData(final URL pacUrl) {
 		try {
 			final URLConnection pacConnection = pacUrl.openConnection();
@@ -25,7 +27,8 @@ public class PacScriptParserUtilities {
 			pacConnection.setReadTimeout(10_000);
 			pacConnection.connect();
 			try (InputStream pacInputStream = pacConnection.getInputStream()) {
-				final String pacData = new String(toByteArray(pacInputStream), StandardCharsets.UTF_8);
+				final byte[] pacBytes = toByteArrayLimited(pacInputStream, MAX_PAC_SCRIPT_SIZE_BYTES, pacUrl);
+				final String pacData = new String(pacBytes, StandardCharsets.UTF_8);
 				return pacData.replace("\r\n", "\n").replace("\r", "\n");
 			}
 		} catch (final MalformedURLException e) {
@@ -33,6 +36,21 @@ public class PacScriptParserUtilities {
 		} catch (final IOException e) {
 			throw new RuntimeException("Cannot read PAC data from URL: " + pacUrl.toString(), e);
 		}
+	}
+
+	private static byte[] toByteArrayLimited(final InputStream inputStream, final int maxBytes, final URL sourceUrlForErrorMessage) throws IOException {
+		final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+		final byte[] buffer = new byte[4096];
+		int lengthRead;
+		long bytesCopied = 0;
+		while ((lengthRead = inputStream.read(buffer)) != EOF) {
+			bytesCopied += lengthRead;
+			if (bytesCopied > maxBytes) {
+				throw new RuntimeException("PAC data at URL '" + sourceUrlForErrorMessage + "' exceeds maximum allowed size of " + maxBytes + " bytes");
+			}
+			byteArrayOutputStream.write(buffer, 0, lengthRead);
+		}
+		return byteArrayOutputStream.toByteArray();
 	}
 
 	public static String removeComments(final String text) {
