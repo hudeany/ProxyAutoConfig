@@ -98,25 +98,24 @@
 			</dirset>
 		</path>
 
-		<junit printsummary="yes" haltonfailure="yes" showOutput="yes">
+		<mkdir dir="${buildPath}/test-reports" />
+
+		<junit printsummary="yes" showOutput="yes" fork="yes" forkmode="perTest"
+		       haltonfailure="no" failureProperty="tests.failed" errorProperty="tests.failed">
 			<classpath refid="test.classpath" />
-			<batchtest todir="build">
+			<batchtest todir="${buildPath}/test-reports">
 				<formatter type="plain" usefile="true"/>
 				<fileset dir="src/test/java">
 					<include name="**/*Test*.java" />
 				</fileset>
 			</batchtest>
 		</junit>
+
+		<fail if="tests.failed" message="Es sind Unit-Tests fehlgeschlagen. Details siehe Reports unter ${buildPath}/test-reports/" />
 	</target>
 
 	<target name="cleanup_after" depends="create_jar, test">
 		<delete dir="${buildPath}/bin" />
 		<delete dir="${buildPath}/testbin" />
-
-		<delete includeEmptyDirs="true">
-			<fileset dir="${buildPath}">
-				<include name="TEST-*" />
-			</fileset>
-		</delete>
 	</target>
 </project>
