@@ -95,7 +95,7 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals("23", proxySettings.get(0));
+			Assert.assertEquals("19", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
