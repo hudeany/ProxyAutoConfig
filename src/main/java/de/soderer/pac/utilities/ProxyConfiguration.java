@@ -71,8 +71,12 @@ public class ProxyConfiguration {
 	 * man-in-the-middle vector. Only enable this if you understand and accept
 	 * that risk (e.g. in a trusted, controlled corporate network).
 	 */
-	public ProxyConfiguration setAllowInsecureHttpWpad(final boolean allowInsecureHttpWpad) {
+	public void setAllowInsecureHttpWpad(final boolean allowInsecureHttpWpad) {
 		this.allowInsecureHttpWpad = allowInsecureHttpWpad;
+	}
+
+	public ProxyConfiguration withAllowInsecureHttpWpad(final boolean newAllowInsecureHttpWpad) {
+		setAllowInsecureHttpWpad(newAllowInsecureHttpWpad);
 		return this;
 	}
 
@@ -84,8 +88,12 @@ public class ProxyConfiguration {
 	 * Default is -1 (cache forever once loaded, until resetPacScriptCache() is
 	 * called manually).
 	 */
-	public ProxyConfiguration setPacScriptCacheMaxAge(final long maxAgeMillis) {
+	public void setPacScriptCacheMaxAge(final long maxAgeMillis) {
 		pacScriptCacheMaxAgeMillis = maxAgeMillis;
+	}
+
+	public ProxyConfiguration withPacScriptCacheMaxAge(final long newMaxAgeMillis) {
+		setPacScriptCacheMaxAge(newMaxAgeMillis);
 		return this;
 	}
 

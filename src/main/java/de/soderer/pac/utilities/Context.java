@@ -32,6 +32,11 @@ public class Context {
 		definedMethods.put(methodName, method);
 	}
 
+	public Context withDefinedMethod(final String newMethodName, final Method newMethod) {
+		setDefinedMethod(newMethodName, newMethod);
+		return this;
+	}
+
 	public boolean hasDefinedMethod(final String methodName) {
 		return definedMethods.containsKey(methodName);
 	}
@@ -44,6 +49,11 @@ public class Context {
 		environmentVariables.put(variableName, variableValue);
 	}
 
+	public Context withEnvironmentVariable(final String newVariableName, final Object newVariableValue) {
+		setEnvironmentVariable(newVariableName, newVariableValue);
+		return this;
+	}
+
 	public boolean hasVariable(final String variableName) {
 		return environmentVariables.containsKey(variableName);
 	}
@@ -54,6 +64,11 @@ public class Context {
 
 	public void setConstVariable(final String variableName) {
 		constVariables.add(variableName);
+	}
+
+	public Context withConstVariable(final String newVariableName) {
+		setConstVariable(newVariableName);
+		return this;
 	}
 
 	public Context createSubContext() {

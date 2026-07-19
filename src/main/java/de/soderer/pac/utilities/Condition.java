@@ -17,17 +17,25 @@ public class Condition implements Statement {
 		}
 	}
 
-	public Condition setElseCodeBlockTokens(final List<String> elseCodeBlockTokens) {
+	public void setElseCodeBlockTokens(final List<String> elseCodeBlockTokens) {
 		if (elseCodeBlockTokens != null) {
 			elseStatements = PacScriptParserUtilities.parseCodeBlockTokens(elseCodeBlockTokens);
 		} else {
 			elseStatements = null;
 		}
+	}
+
+	public Condition withElseCodeBlockTokens(final List<String> newElseCodeBlockTokens) {
+		setElseCodeBlockTokens(newElseCodeBlockTokens);
 		return this;
 	}
 
-	public Condition setElseCodeBlockStatements(final List<Statement> elseStatements) {
+	public void setElseCodeBlockStatements(final List<Statement> elseStatements) {
 		this.elseStatements = elseStatements;
+	}
+
+	public Condition withElseCodeBlockStatements(final List<Statement> newElseStatements) {
+		setElseCodeBlockStatements(newElseStatements);
 		return this;
 	}
 
