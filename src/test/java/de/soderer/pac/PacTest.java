@@ -2,8 +2,8 @@ package de.soderer.pac;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import de.soderer.pac.utilities.PacScriptParserUtilities;
 
@@ -16,7 +16,7 @@ public class PacTest {
 			final String pacUrlString = PacScriptParser.findPacFileUrlByWpad();
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -27,11 +27,11 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals(1, proxySettings.size());
-			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
+			Assertions.assertEquals(1, proxySettings.size());
+			Assertions.assertEquals("PROXY proxy:80", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -42,11 +42,11 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals(1, proxySettings.size());
-			Assert.assertEquals("PROXY proxy:80", proxySettings.get(0));
+			Assertions.assertEquals(1, proxySettings.size());
+			Assertions.assertEquals("PROXY proxy:80", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -57,11 +57,11 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals(1, proxySettings.size());
-			Assert.assertEquals("PROXY 10.0.0.1:8080", proxySettings.get(0));
+			Assertions.assertEquals(1, proxySettings.size());
+			Assertions.assertEquals("PROXY 10.0.0.1:8080", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -72,19 +72,19 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxyExample = pacScriptParser.discoverProxySettings("https://checkHostname");
-			Assert.assertEquals(1, proxyExample.size());
-			Assert.assertEquals("check hostname", proxyExample.get(0));
+			Assertions.assertEquals(1, proxyExample.size());
+			Assertions.assertEquals("check hostname", proxyExample.get(0));
 
 			final List<String> proxyOther = pacScriptParser.discoverProxySettings("https://otherHostname");
-			Assert.assertEquals(1, proxyOther.size());
-			Assert.assertEquals("other hostname", proxyOther.get(0));
+			Assertions.assertEquals(1, proxyOther.size());
+			Assertions.assertEquals("other hostname", proxyOther.get(0));
 
 			final List<String> proxySimple = pacScriptParser.discoverProxySettings("https://unknownHostname");
-			Assert.assertEquals(1, proxySimple.size());
-			Assert.assertEquals("no match", proxySimple.get(0));
+			Assertions.assertEquals(1, proxySimple.size());
+			Assertions.assertEquals("no match", proxySimple.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -95,10 +95,10 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals("19", proxySettings.get(0));
+			Assertions.assertEquals("19", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -109,10 +109,10 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals("true", proxySettings.get(0));
+			Assertions.assertEquals("true", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -123,10 +123,10 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals("DIRECT", proxySettings.get(0));
+			Assertions.assertEquals("DIRECT", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -137,10 +137,10 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			final List<String> proxySettings = pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.assertEquals("DIRECT", proxySettings.get(0));
+			Assertions.assertEquals("DIRECT", proxySettings.get(0));
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			Assertions.fail(e.getMessage());
 		}
 	}
 
@@ -151,9 +151,9 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.fail("Missing expected exception");
+			Assertions.fail("Missing expected exception");
 		} catch (final Exception e) {
-			Assert.assertTrue(e.getMessage().startsWith("Assignment to constant after declaration"));
+			Assertions.assertTrue(e.getMessage().startsWith("Assignment to constant after declaration"));
 		}
 	}
 
@@ -164,9 +164,9 @@ public class PacTest {
 			final PacScriptParser pacScriptParser = new PacScriptParser(pacString);
 
 			pacScriptParser.discoverProxySettings("https://example.com");
-			Assert.fail("Missing expected exception");
+			Assertions.fail("Missing expected exception");
 		} catch (final Exception e) {
-			Assert.assertTrue(e.getMessage().startsWith("Unexpected expression when expecting single value"));
+			Assertions.assertTrue(e.getMessage().startsWith("Unexpected expression when expecting single value"));
 		}
 	}
 }
