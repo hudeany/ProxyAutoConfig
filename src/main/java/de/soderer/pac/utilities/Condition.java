@@ -2,11 +2,24 @@ package de.soderer.pac.utilities;
 
 import java.util.List;
 
+/**
+ * An if statement with optional else block.
+ */
 public class Condition implements Statement {
 	private final Expression condition;
 	private final List<Statement> ifStatements;
 	private List<Statement> elseStatements;
 
+	/**
+	 * Creates an if statement.
+	 *
+	 * @param conditionTokens
+	 *            the tokens of the condition
+	 * @param ifCodeBlockTokens
+	 *            the tokens of the if block
+	 * @param elseCodeBlockTokens
+	 *            the tokens of the else block, or null
+	 */
 	public Condition(final List<String> conditionTokens, final List<String> ifCodeBlockTokens, final List<String> elseCodeBlockTokens) {
 		condition = new Expression(conditionTokens);
 		ifStatements = PacScriptParserUtilities.parseCodeBlockTokens(ifCodeBlockTokens);
@@ -17,6 +30,12 @@ public class Condition implements Statement {
 		}
 	}
 
+	/**
+	 * Sets the else block by its tokens.
+	 *
+	 * @param elseCodeBlockTokens
+	 *            the tokens of the else block, or null
+	 */
 	public void setElseCodeBlockTokens(final List<String> elseCodeBlockTokens) {
 		if (elseCodeBlockTokens != null) {
 			elseStatements = PacScriptParserUtilities.parseCodeBlockTokens(elseCodeBlockTokens);
@@ -25,15 +44,35 @@ public class Condition implements Statement {
 		}
 	}
 
+	/**
+	 * Sets the else block by its tokens.
+	 *
+	 * @param newElseCodeBlockTokens
+	 *            the tokens of the else block, or null
+	 * @return this condition for chaining
+	 */
 	public Condition withElseCodeBlockTokens(final List<String> newElseCodeBlockTokens) {
 		setElseCodeBlockTokens(newElseCodeBlockTokens);
 		return this;
 	}
 
+	/**
+	 * Sets the else block by its statements, e.g. for "else if".
+	 *
+	 * @param elseStatements
+	 *            the statements of the else block
+	 */
 	public void setElseCodeBlockStatements(final List<Statement> elseStatements) {
 		this.elseStatements = elseStatements;
 	}
 
+	/**
+	 * Sets the else block by its statements, e.g. for "else if".
+	 *
+	 * @param newElseStatements
+	 *            the statements of the else block
+	 * @return this condition for chaining
+	 */
 	public Condition withElseCodeBlockStatements(final List<Statement> newElseStatements) {
 		setElseCodeBlockStatements(newElseStatements);
 		return this;

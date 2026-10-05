@@ -17,9 +17,27 @@ import java.util.Stack;
 
 import de.soderer.pac.utilities.Assignment.Scope;
 
+/**
+ * Helper methods for reading, tokenizing and parsing PAC scripts.
+ */
 public class PacScriptParserUtilities {
+	/**
+	 * Utility class, not to be instantiated.
+	 */
+	private PacScriptParserUtilities() {
+	}
+
 	private static final int MAX_PAC_SCRIPT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+	/**
+	 * Downloads a PAC script, with timeouts of 10 seconds and a maximum size of 5 MB.
+	 *
+	 * @param pacUrl
+	 *            the URL of the PAC file
+	 * @return the script with "\n" linebreaks
+	 * @throws RuntimeException
+	 *             if the file cannot be read or is too large
+	 */
 	public static String readPacData(final URL pacUrl) {
 		try {
 			final URLConnection pacConnection = pacUrl.openConnection();
@@ -53,6 +71,13 @@ public class PacScriptParserUtilities {
 		return byteArrayOutputStream.toByteArray();
 	}
 
+	/**
+	 * Removes line comments and block comments outside of string literals.
+	 *
+	 * @param text
+	 *            the script
+	 * @return the script without comments
+	 */
 	public static String removeComments(final String text) {
 		final int outsideComment = 0;
 		final int insideStringLiteral = 1;
@@ -116,22 +141,49 @@ public class PacScriptParserUtilities {
 		return result;
 	}
 
-	public static String getHostnameFromRequestString(String requestString) {
-		if (requestString == null || !requestString.contains("/")) {
-			return requestString;
-		} else {
-			if (requestString.toLowerCase().startsWith("http")) {
-				requestString = requestString.substring(requestString.indexOf("//") + 2);
-
-				if (!requestString.contains("/")) {
-					return requestString;
-				}
-			}
-
-			return requestString.substring(0, requestString.indexOf("/"));
+	/**
+	 * Returns the host name of an URL, as given to FindProxyForURL: without protocol, user
+	 * information, port, path, query and fragment.
+	 *
+	 * @param requestString
+	 *            the URL, also without protocol
+	 * @return the host name, or null for null
+	 */
+	public static String getHostnameFromRequestString(final String requestString) {
+		if (requestString == null) {
+			return null;
 		}
+		String host = requestString.trim();
+		// Remove protocol, path, query and fragment
+		if (host.contains("://")) {
+			host = host.substring(host.indexOf("://") + 3);
+		}
+		for (final char separator : new char[] { '/', '?', '#' }) {
+			if (host.indexOf(separator) >= 0) {
+				host = host.substring(0, host.indexOf(separator));
+			}
+		}
+		// Remove user information and port, the PAC host parameter is the plain host name
+		if (host.indexOf('@') >= 0) {
+			host = host.substring(host.lastIndexOf('@') + 1);
+		}
+		if (host.startsWith("[") && host.indexOf(']') > 0) {
+			host = host.substring(1, host.indexOf(']'));
+		} else if (host.indexOf(':') >= 0 && host.indexOf(':') == host.lastIndexOf(':')) {
+			host = host.substring(0, host.indexOf(':'));
+		}
+		return host;
 	}
 
+	/**
+	 * Reads all data of a stream.
+	 *
+	 * @param inputStream
+	 *            the stream, not closed
+	 * @return the data, or null for null
+	 * @throws IOException
+	 *             if reading fails
+	 */
 	public static byte[] toByteArray(final InputStream inputStream) throws IOException {
 		if (inputStream == null) {
 			return null;
@@ -145,6 +197,17 @@ public class PacScriptParserUtilities {
 
 	private static final int EOF = -1;
 
+	/**
+	 * Copies all data of a stream to another stream. The streams are not closed.
+	 *
+	 * @param inputStream
+	 *            the stream to read
+	 * @param outputStream
+	 *            the stream to write
+	 * @return the number of bytes copied
+	 * @throws IOException
+	 *             if reading or writing fails
+	 */
 	public static long copy(final InputStream inputStream, final OutputStream outputStream) throws IOException {
 		final byte[] buffer = new byte[4096];
 		int lengthRead;
@@ -157,6 +220,13 @@ public class PacScriptParserUtilities {
 		return bytesCopied;
 	}
 
+	/**
+	 * Splits a script into tokens: names, numbers, string literals, operators and brackets.
+	 *
+	 * @param pacScript
+	 *            the script without comments
+	 * @return the tokens
+	 */
 	public static List<String> tokenize(final String pacScript) {
 		final int outsideStringLiteral = 0;
 		final int insideStringLiteral = 1;
@@ -268,6 +338,17 @@ public class PacScriptParserUtilities {
 		}
 	}
 
+	/**
+	 * Finds the closing bracket for an opening bracket token.
+	 *
+	 * @param tokens
+	 *            the tokens
+	 * @param startIndex
+	 *            the index of the opening bracket "(", "[" or "{"
+	 * @return the index of the matching closing bracket
+	 * @throws RuntimeException
+	 *             if there is no matching closing bracket
+	 */
 	public static int findClosingBracketToken(final List<String> tokens, final int startIndex) {
 		final Stack<Character> openBrackets = new Stack<>();
 		String currentToken = tokens.get(startIndex);
@@ -308,6 +389,16 @@ public class PacScriptParserUtilities {
 		throw new RuntimeException("Unbalanced brackets starting at index: " + startIndex);
 	}
 
+	/**
+	 * Parses the tokens of a code block into statements: declarations, assignments, conditions,
+	 * loops, return statements and expressions.
+	 *
+	 * @param codeBlockTokens
+	 *            the tokens without the surrounding brackets
+	 * @return the statements
+	 * @throws RuntimeException
+	 *             if the code is invalid or not supported
+	 */
 	public static List<Statement> parseCodeBlockTokens(final List<String> codeBlockTokens) {
 		final List<Statement> statements = new ArrayList<>();
 		for (int tokenIndex = 0; tokenIndex < codeBlockTokens.size(); tokenIndex++) {
@@ -465,7 +556,8 @@ public class PacScriptParserUtilities {
 				final int loopHeadStart = tokenIndex;
 				final int loopHeadEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, loopHeadStart);
 
-				final String loopConditionExpressionString = join(codeBlockTokens.subList(loopHeadStart + 1, loopHeadEnd), ";");
+				// Tokens joined by blanks, so the condition can be tokenized again
+				final String loopConditionExpressionString = join(codeBlockTokens.subList(loopHeadStart + 1, loopHeadEnd), " ");
 
 				tokenIndex = loopHeadEnd + 1;
 				nextToken = codeBlockTokens.get(tokenIndex);
@@ -736,6 +828,15 @@ public class PacScriptParserUtilities {
 		return statements;
 	}
 
+	/**
+	 * Joins texts with a separator.
+	 *
+	 * @param dataArray
+	 *            the texts
+	 * @param separator
+	 *            the separator
+	 * @return the joined text
+	 */
 	public static String join(final String[] dataArray, final String separator) {
 		String result = "";
 		for (int i = 0; i < dataArray.length; i++) {
@@ -747,6 +848,15 @@ public class PacScriptParserUtilities {
 		return result;
 	}
 
+	/**
+	 * Joins texts with a separator.
+	 *
+	 * @param dataList
+	 *            the texts
+	 * @param separator
+	 *            the separator
+	 * @return the joined text
+	 */
 	public static String join(final List<String> dataList, final String separator) {
 		String result = "";
 		for (int i = 0; i < dataList.size(); i++) {
@@ -758,6 +868,15 @@ public class PacScriptParserUtilities {
 		return result;
 	}
 
+	/**
+	 * Finds the first of the given operators outside of round and square brackets.
+	 *
+	 * @param tokens
+	 *            the tokens
+	 * @param operators
+	 *            the operators to find
+	 * @return the token index, or -1 if none was found
+	 */
 	public static int indexOfOperatorOutsideOfBrackets(final List<String> tokens, final List<String> operators) {
 		int openBrackets = 0;
 		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
@@ -777,10 +896,24 @@ public class PacScriptParserUtilities {
 		return -1;
 	}
 
+	/**
+	 * Indents all lines of a text by a tab.
+	 *
+	 * @param text
+	 *            the text
+	 * @return the indented text
+	 */
 	public static String indentLines(final String text) {
 		return "\t" + text.replace("\n", "\n" + "\t");
 	}
 
+	/**
+	 * Replaces alias tokens by their standard form, e.g. "not" by "!".
+	 *
+	 * @param tokens
+	 *            the tokens, changed in place
+	 * @return the same token list
+	 */
 	public static List<String> replaceAliases(final List<String> tokens) {
 		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
 			if ("not".equals(tokens.get(tokenIndex))) {
@@ -790,6 +923,15 @@ public class PacScriptParserUtilities {
 		return tokens;
 	}
 
+	/**
+	 * Finds the last of the given operators outside of round and square brackets.
+	 *
+	 * @param tokens
+	 *            the tokens
+	 * @param operators
+	 *            the operators to find
+	 * @return the token index, or -1 if none was found
+	 */
 	public static int lastIndexOfOperatorOutsideOfBrackets(final List<String> tokens, final List<String> operators) {
 		int openBrackets = 0;
 		int lastMatch = -1;

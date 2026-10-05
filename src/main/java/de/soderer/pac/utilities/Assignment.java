@@ -2,8 +2,17 @@ package de.soderer.pac.utilities;
 
 import java.util.List;
 
+/**
+ * A variable declaration or assignment, like "var x = 1" or "x = 2".
+ */
 public class Assignment implements Statement {
+	/**
+	 * Kinds of variable declarations.
+	 */
 	public enum Scope {
+		/**
+		 * Declaration by "var" or plain assignment.
+		 */
 		VAR,
 
 		/**
@@ -11,6 +20,9 @@ public class Assignment implements Statement {
 		 */
 		LET,
 
+		/**
+		 * Declaration by "const", the variable cannot be changed.
+		 */
 		CONST
 	}
 
@@ -20,10 +32,28 @@ public class Assignment implements Statement {
 
 	private boolean alreadyExecutedOnce = false;
 
+	/**
+	 * Creates an assignment without declaration.
+	 *
+	 * @param variableName
+	 *            the variable name
+	 * @param expressionTokens
+	 *            the tokens of the value expression
+	 */
 	public Assignment(final String variableName, final List<String> expressionTokens) {
 		this(Scope.VAR, variableName, expressionTokens);
 	}
 
+	/**
+	 * Creates a declaration.
+	 *
+	 * @param scope
+	 *            the kind of declaration
+	 * @param variableName
+	 *            the variable name
+	 * @param expressionTokens
+	 *            the tokens of the value expression
+	 */
 	public Assignment(final Scope scope, final String variableName, final List<String> expressionTokens) {
 		this.scope = scope;
 		this.variableName = variableName;

@@ -7,6 +7,10 @@ import java.util.List;
 import de.soderer.pac.utilities.exception.BreakLoopException;
 import de.soderer.pac.utilities.exception.ContinueLoopException;
 
+/**
+ * An expression of a PAC script: a literal, variable, array, function call, or an operation
+ * with JavaScript operator precedence.
+ */
 public class Expression implements Statement {
 	private final static List<List<String>> PRECEDENCE_LEVELS = Arrays.asList(
 			Arrays.asList("||"),
@@ -29,10 +33,21 @@ public class Expression implements Statement {
 	private String operator;
 	private Expression expression2;
 
+	/**
+	 * Returns the tokens of the expression.
+	 *
+	 * @return the tokens
+	 */
 	public List<String> getExpressionTokens() {
 		return expressionTokens;
 	}
 
+	/**
+	 * Creates an expression.
+	 *
+	 * @param expressionTokens
+	 *            the tokens of the expression
+	 */
 	public Expression(final List<String> expressionTokens) {
 		if (expressionTokens == null || expressionTokens.size() == 0) {
 			throw new RuntimeException("Unsupported empty expression");
@@ -301,11 +316,11 @@ public class Expression implements Statement {
 				} else if ("shExpMatch".equals(firstToken)) {
 					return PacScriptMethods.shExpMatch((String) methodCallParameters.get(0), (String) methodCallParameters.get(1));
 				} else if ("weekdayRange".equals(firstToken)) {
-					return PacScriptMethods.weekdayRange((String) methodCallParameters.get(0), (String) methodCallParameters.get(1), (String) methodCallParameters.get(2));
+					return PacScriptMethods.weekdayRange((String) getParameter(methodCallParameters, 0), (String) getParameter(methodCallParameters, 1), (String) getParameter(methodCallParameters, 2));
 				} else if ("dateRange".equals(firstToken)) {
-					return PacScriptMethods.dateRange(methodCallParameters.get(0), methodCallParameters.get(1), methodCallParameters.get(2), methodCallParameters.get(3), methodCallParameters.get(4), methodCallParameters.get(5), methodCallParameters.get(6));
+					return PacScriptMethods.dateRange(getParameter(methodCallParameters, 0), getParameter(methodCallParameters, 1), getParameter(methodCallParameters, 2), getParameter(methodCallParameters, 3), getParameter(methodCallParameters, 4), getParameter(methodCallParameters, 5), getParameter(methodCallParameters, 6));
 				} else if ("timeRange".equals(firstToken)) {
-					return PacScriptMethods.timeRange(methodCallParameters.get(0), methodCallParameters.get(1), methodCallParameters.get(2), methodCallParameters.get(3), methodCallParameters.get(4), methodCallParameters.get(5), methodCallParameters.get(6));
+					return PacScriptMethods.timeRange(getParameter(methodCallParameters, 0), getParameter(methodCallParameters, 1), getParameter(methodCallParameters, 2), getParameter(methodCallParameters, 3), getParameter(methodCallParameters, 4), getParameter(methodCallParameters, 5), getParameter(methodCallParameters, 6));
 				} else if ("isResolvableEx".equals(firstToken)) {
 					return PacScriptMethods.isResolvableEx((String) methodCallParameters.get(0));
 				} else if ("isInNetEx".equals(firstToken)) {
@@ -480,5 +495,18 @@ public class Expression implements Statement {
 
 	private static boolean bothNumbers(final Object a, final Object b) {
 		return a instanceof Number && b instanceof Number;
+	}
+
+	/**
+	 * Returns an optional method call parameter.
+	 *
+	 * @param methodCallParameters
+	 *            the parameters given in the PAC script
+	 * @param index
+	 *            the parameter index
+	 * @return the parameter, or null if fewer parameters were given
+	 */
+	private static Object getParameter(final List<Object> methodCallParameters, final int index) {
+		return index < methodCallParameters.size() ? methodCallParameters.get(index) : null;
 	}
 }

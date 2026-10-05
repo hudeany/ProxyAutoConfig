@@ -21,10 +21,23 @@ public class ExecutionGuard {
 	private int stepCount = 0;
 	private int callDepth = 0;
 
+	/**
+	 * Creates a guard with default limits: 2,000,000 steps, 5 seconds and a call depth of 200.
+	 */
 	public ExecutionGuard() {
 		this(DEFAULT_MAX_STEPS, DEFAULT_MAX_DURATION_MILLIS, DEFAULT_MAX_CALL_DEPTH);
 	}
 
+	/**
+	 * Creates a guard.
+	 *
+	 * @param maxSteps
+	 *            the maximum number of loop iterations and function calls
+	 * @param maxDurationMillis
+	 *            the maximum execution time in milliseconds
+	 * @param maxCallDepth
+	 *            the maximum nesting depth of function calls
+	 */
 	public ExecutionGuard(final int maxSteps, final long maxDurationMillis, final int maxCallDepth) {
 		this.maxSteps = maxSteps;
 		this.maxDurationMillis = maxDurationMillis;
@@ -57,6 +70,9 @@ public class ExecutionGuard {
 		}
 	}
 
+	/**
+	 * Must be called after every function call, see {@link #enterMethodCall()}.
+	 */
 	public void leaveMethodCall() {
 		callDepth--;
 	}

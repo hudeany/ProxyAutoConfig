@@ -1,19 +1,29 @@
 package de.soderer.pac.utilities;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import de.soderer.pac.utilities.Assignment.Scope;
 import de.soderer.pac.utilities.exception.BreakLoopException;
 import de.soderer.pac.utilities.exception.ContinueLoopException;
 
+/**
+ * A for or while loop.
+ */
 public class Loop implements Statement {
 	private Assignment loopInit;
 	private final Expression loopCondition;
 	private final Statement loopStep;
 	private final List<Statement> loopStatements;
 
+	/**
+	 * Creates a for loop or a while loop by the tokens of its head.
+	 *
+	 * @param loopHeadTokens
+	 *            the tokens within the round brackets: "init; condition; step" or a condition
+	 * @param loopCodeBlockTokens
+	 *            the tokens of the loop body
+	 */
 	public Loop(final List<String> loopHeadTokens, final List<String> loopCodeBlockTokens) {
 		List<String> loopInitTokens = null;
 		List<String> loopConditionTokens = null;
@@ -70,12 +80,21 @@ public class Loop implements Statement {
 		loopStatements = PacScriptParserUtilities.parseCodeBlockTokens(loopCodeBlockTokens);
 	}
 
+	/**
+	 * Creates a while loop.
+	 *
+	 * @param loopConditionExpression
+	 *            the condition
+	 * @param loopCodeBlockTokens
+	 *            the tokens of the loop body
+	 */
 	public Loop(final String loopConditionExpression, final List<String> loopCodeBlockTokens) {
 		if (loopConditionExpression == null || loopConditionExpression.trim().length() == 0) {
 			throw new RuntimeException("Unsupported loop empty condition expression");
 		}
 
-		loopCondition = new Expression(Collections.singletonList(loopConditionExpression));
+		// Conditions with several tokens like "n < 3" must be split into their tokens
+		loopCondition = new Expression(PacScriptParserUtilities.tokenize(loopConditionExpression));
 		loopStep = null;
 		loopStatements = PacScriptParserUtilities.parseCodeBlockTokens(loopCodeBlockTokens);
 	}
