@@ -14,6 +14,7 @@ import de.soderer.pac.utilities.ProxyConfiguration.ProxyConfigurationType;
 /**
  * Regression tests for bugs found during the Javadoc and bug review of the PAC library.
  */
+@SuppressWarnings("static-method")
 public class PacRegressionTest {
 	@Test
 	public void testProxyTypes() throws Exception {

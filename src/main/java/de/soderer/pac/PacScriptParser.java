@@ -377,13 +377,13 @@ public class PacScriptParser {
 
 	private List<String> discoverProxySettingsInternal(final String destinationUrl) {
 		final String hostname = PacScriptParserUtilities.getHostnameFromRequestString(destinationUrl);
-		final Map<String, Method> pacScriptMethods = getPacScriptMethods();
+		final Map<String, Method> scriptMethods = getPacScriptMethods();
 		final Context context = new Context();
-		for (final Entry<String, Method> pacScriptMethodEntry : pacScriptMethods.entrySet()) {
+		for (final Entry<String, Method> pacScriptMethodEntry : scriptMethods.entrySet()) {
 			context.setDefinedMethod(pacScriptMethodEntry.getKey(), pacScriptMethodEntry.getValue());
 		}
 
-		final Method findProxyForUrlMethod = pacScriptMethods.get("FindProxyForURL");
+		final Method findProxyForUrlMethod = scriptMethods.get("FindProxyForURL");
 		if (findProxyForUrlMethod == null) {
 			throw new RuntimeException("PAC script does not define the required method 'FindProxyForURL'");
 		}
@@ -515,12 +515,12 @@ public class PacScriptParser {
 	 */
 	@Override
 	public String toString() {
-		final Map<String, Method> pacScriptMethods = getPacScriptMethods();
+		final Map<String, Method> scriptMethods = getPacScriptMethods();
 		String returnValue = "";
-		if (pacScriptMethods.containsKey("FindProxyForURL")) {
-			returnValue += pacScriptMethods.get("FindProxyForURL").toString() + "\n";
+		if (scriptMethods.containsKey("FindProxyForURL")) {
+			returnValue += scriptMethods.get("FindProxyForURL").toString() + "\n";
 		}
-		for (final Entry<String, Method> method : pacScriptMethods.entrySet()) {
+		for (final Entry<String, Method> method : scriptMethods.entrySet()) {
 			if (!("FindProxyForURL").equals(method.getKey())) {
 				returnValue += method.getValue().toString() + "\n";
 			}
