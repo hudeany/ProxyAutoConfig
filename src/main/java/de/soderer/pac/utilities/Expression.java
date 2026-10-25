@@ -3,6 +3,7 @@ package de.soderer.pac.utilities;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import de.soderer.pac.utilities.exception.BreakLoopException;
 import de.soderer.pac.utilities.exception.ContinueLoopException;
@@ -27,11 +28,29 @@ public class Expression implements Statement {
 			"++", "--", "!"
 	});
 
+	private final static List<String> prefixOperators = Arrays.asList(new String[] {
+			"++", "--", "!", "-", "+"
+	});
+
+	/** All operator tokens, used to detect whether a "+" or "-" is a unary sign */
+	private final static List<String> allOperators = Arrays.asList(new String[] {
+			"||", "&&", "|", "&", "==", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "%", "!", "=", "+=", "-=", "*=", "/="
+	});
+
+	/** Strict JavaScript decimal number literal (without sign) */
+	private final static Pattern DECIMAL_NUMBER_PATTERN = Pattern.compile("^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?$");
+
+	/** JavaScript hexadecimal number literal */
+	private final static Pattern HEX_NUMBER_PATTERN = Pattern.compile("^0[xX][0-9a-fA-F]+$");
+
 	private List<String> expressionTokens;
 
 	private Expression expression1;
 	private String operator;
 	private Expression expression2;
+
+	/** Expression was enclosed in round brackets, which are kept for toString() */
+	private boolean bracketed = false;
 
 	/**
 	 * Returns the tokens of the expression.
@@ -51,23 +70,17 @@ public class Expression implements Statement {
 	public Expression(final List<String> expressionTokens) {
 		if (expressionTokens == null || expressionTokens.size() == 0) {
 			throw new RuntimeException("Unsupported empty expression");
-		} else if ("(".equals(expressionTokens.get(0))) {
-			final int bracketEnd = PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 0);
-			expression1 = new Expression(expressionTokens.subList(1, bracketEnd));
-			if (bracketEnd < expressionTokens.size() - 1) {
-				operator = expressionTokens.get(bracketEnd + 1);
-				expression2 = new Expression(expressionTokens.subList(bracketEnd + 2, expressionTokens.size()));
-			}
-		} else if ("[".equals(expressionTokens.get(0))) {
-			final int bracketEnd = PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 0);
-			this.expressionTokens = expressionTokens.subList(0, bracketEnd + 1);
-			if (bracketEnd < expressionTokens.size() - 1) {
-				throw new RuntimeException("Unsupported expression with operator for array found: " + expressionTokens.get(bracketEnd + 1));
-			}
+		} else if ("(".equals(expressionTokens.get(0)) && PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 0) == expressionTokens.size() - 1) {
+			// Whole expression is enclosed in brackets
+			expression1 = new Expression(expressionTokens.subList(1, expressionTokens.size() - 1));
+			bracketed = true;
+		} else if ("[".equals(expressionTokens.get(0)) && PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 0) == expressionTokens.size() - 1) {
+			// Array literal
+			this.expressionTokens = expressionTokens;
 		} else {
 			int operatorIndex = -1;
 			for (final List<String> precedenceLevel : PRECEDENCE_LEVELS) {
-				operatorIndex = PacScriptParserUtilities.lastIndexOfOperatorOutsideOfBrackets(expressionTokens, precedenceLevel);
+				operatorIndex = lastIndexOfBinaryOperatorOutsideOfBrackets(expressionTokens, precedenceLevel);
 				if (operatorIndex > -1) {
 					break;
 				}
@@ -77,14 +90,20 @@ public class Expression implements Statement {
 				expression1 = new Expression(expressionTokens.subList(0, operatorIndex));
 				operator = expressionTokens.get(operatorIndex);
 				expression2 = new Expression(expressionTokens.subList(operatorIndex + 1, expressionTokens.size()));
+			} else if ("[".equals(expressionTokens.get(0))) {
+				final int bracketEnd = PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 0);
+				throw new RuntimeException("Unsupported expression with operator for array found: " + expressionTokens.get(bracketEnd + 1));
+			} else if (prefixOperators.contains(expressionTokens.get(0))) {
+				if (expressionTokens.size() == 1) {
+					throw new RuntimeException("Missing operand for unary operator: " + expressionTokens.get(0));
+				}
+				operator = expressionTokens.get(0);
+				expression2 = new Expression(expressionTokens.subList(1, expressionTokens.size()));
 			} else {
 				final int unaryOperatorIndex = PacScriptParserUtilities.indexOfOperatorOutsideOfBrackets(expressionTokens, unaryOperators);
 				if (unaryOperatorIndex == -1) {
 					this.expressionTokens = expressionTokens;
-				} else if (unaryOperatorIndex == 0) {
-					operator = expressionTokens.get(unaryOperatorIndex);
-					expression2 = new Expression(expressionTokens.subList(1, expressionTokens.size()));
-				} else if (unaryOperatorIndex == expressionTokens.size() - 1) {
+				} else if (unaryOperatorIndex == expressionTokens.size() - 1 && ("++".equals(expressionTokens.get(unaryOperatorIndex)) || "--".equals(expressionTokens.get(unaryOperatorIndex)))) {
 					expression1 = new Expression(expressionTokens.subList(0, unaryOperatorIndex));
 					operator = expressionTokens.get(unaryOperatorIndex);
 				} else {
@@ -94,34 +113,78 @@ public class Expression implements Statement {
 		}
 	}
 
+	/**
+	 * Finds the last binary operator of the given precedence level outside of brackets.
+	 * A "+" or "-" directly following another operator, an opening bracket or a comma, or standing at the start, is a unary sign and is skipped.
+	 */
+	private static int lastIndexOfBinaryOperatorOutsideOfBrackets(final List<String> tokens, final List<String> operators) {
+		int openBrackets = 0;
+		int lastMatch = -1;
+		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
+			final String token = tokens.get(tokenIndex);
+			if ("(".equals(token) || "[".equals(token)) {
+				openBrackets++;
+			} else if (")".equals(token) || "]".equals(token)) {
+				openBrackets--;
+			} else if (openBrackets == 0 && operators.contains(token)) {
+				if (("+".equals(token) || "-".equals(token)) && !isPrecededByValue(tokens, tokenIndex)) {
+					continue;
+				}
+				lastMatch = tokenIndex;
+			}
+		}
+		return lastMatch;
+	}
+
+	private static boolean isPrecededByValue(final List<String> tokens, final int tokenIndex) {
+		if (tokenIndex == 0) {
+			return false;
+		}
+		final String previousToken = tokens.get(tokenIndex - 1);
+		if ("++".equals(previousToken) || "--".equals(previousToken)) {
+			// Postfix increment/decrement only, if there is an operand before it
+			return isPrecededByValue(tokens, tokenIndex - 1);
+		}
+		return !allOperators.contains(previousToken) && !"(".equals(previousToken) && !"[".equals(previousToken) && !",".equals(previousToken);
+	}
+
 	@Override
 	public Object execute(final Context context) {
 		if (expressionTokens == null) {
-			final Object result1 = expression1 == null ? null : expression1.execute(context);
-			final Object result2 = expression2 == null ? null : expression2.execute(context);
-			if (result1 == null) {
-				if ("++".equals(operator) && result2 != null && result2 instanceof Integer) {
+			if (expression1 == null) {
+				// Prefix operator
+				final Object result2 = expression2.execute(context);
+				if ("++".equals(operator) && result2 instanceof Integer) {
 					final int value = ((Integer) result2) + 1;
 					if (expression2.getExpressionTokens() != null && expression2.getExpressionTokens().size() == 1 && context.hasVariable(expression2.getExpressionTokens().get(0))) {
 						context.setEnvironmentVariable(expression2.getExpressionTokens().get(0), value);
 					}
 					return value;
-				} else if ("--".equals(operator) && result2 != null && result2 instanceof Integer) {
+				} else if ("--".equals(operator) && result2 instanceof Integer) {
 					final int value = ((Integer) result2) - 1;
 					if (expression2.getExpressionTokens() != null && expression2.getExpressionTokens().size() == 1 && context.hasVariable(expression2.getExpressionTokens().get(0))) {
 						context.setEnvironmentVariable(expression2.getExpressionTokens().get(0), value);
 					}
 					return value;
-				} else if ("==".equals(operator) && result2 == null) {
-					return true;
-				} else if ("!".equals(operator) && result2 != null && result2 instanceof Boolean) {
+				} else if ("!".equals(operator) && result2 instanceof Boolean) {
 					return !(Boolean) result2;
-				} else if (operator != null) {
-					throw new RuntimeException("Unsupported operator: " + operator);
+				} else if ("-".equals(operator) && result2 instanceof Integer) {
+					return -((Integer) result2);
+				} else if ("-".equals(operator) && result2 instanceof Number) {
+					return -((Number) result2).doubleValue();
+				} else if ("+".equals(operator) && result2 instanceof Number) {
+					return result2;
 				} else {
-					throw new RuntimeException("Unsupported expression found");
+					throw new RuntimeException("Unsupported operator: " + operator);
 				}
-			} else if (result2 == null) {
+			} else if (operator == null) {
+				// Bracketed expression
+				return expression1.execute(context);
+			}
+
+			final Object result1 = expression1.execute(context);
+			if (expression2 == null) {
+				// Postfix operator
 				if ("++".equals(operator) && result1 instanceof Integer) {
 					final int value = ((Integer) result1) + 1;
 					if (expression1.getExpressionTokens() != null && expression1.getExpressionTokens().size() == 1 && context.hasVariable(expression1.getExpressionTokens().get(0))) {
@@ -134,10 +197,26 @@ public class Expression implements Statement {
 						context.setEnvironmentVariable(expression1.getExpressionTokens().get(0), value);
 					}
 					return result1;
-				} else if (operator != null) {
-					throw new RuntimeException("Unsupported operator: " + operator);
 				} else {
-					return result1;
+					throw new RuntimeException("Unsupported operator: " + operator);
+				}
+			}
+
+			// Short-circuit evaluation of logical operators, like in JavaScript
+			if ("&&".equals(operator) && Boolean.FALSE.equals(result1)) {
+				return false;
+			} else if ("||".equals(operator) && Boolean.TRUE.equals(result1)) {
+				return true;
+			}
+
+			final Object result2 = expression2.execute(context);
+			if (result1 == null || result2 == null) {
+				if ("==".equals(operator)) {
+					return result1 == result2;
+				} else if ("!=".equals(operator)) {
+					return result1 != result2;
+				} else {
+					throw new RuntimeException("Unsupported null parameter for operator: " + operator);
 				}
 			} else {
 				if ("==".equals(operator)) {
@@ -186,7 +265,7 @@ public class Expression implements Statement {
 					}
 				} else if (">=".equals(operator)) {
 					if (result1 == result2) {
-						return false;
+						return true;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) >= (Integer) result2;
 					} else if (bothNumbers(result1, result2)) {
@@ -196,7 +275,7 @@ public class Expression implements Statement {
 					}
 				} else if ("<=".equals(operator)) {
 					if (result1 == result2) {
-						return false;
+						return true;
 					} else if (result1 instanceof Integer && result2 instanceof Integer) {
 						return ((Integer) result1) <= (Integer) result2;
 					} else if (bothNumbers(result1, result2)) {
@@ -293,6 +372,9 @@ public class Expression implements Statement {
 				}
 				return array;
 			} else if (expressionTokens.size() > 1 && expressionTokens.get(1).equals("(")) {
+				if (PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 1) != expressionTokens.size() - 1) {
+					throw new RuntimeException("Unexpected expression when expecting single value");
+				}
 				final List<Object> methodCallParameters = readMethodParameters(context, 1);
 
 				if (context.hasDefinedMethod(firstToken)) {
@@ -333,11 +415,16 @@ public class Expression implements Statement {
 					return PacScriptMethods.sortIpAddressList((String) methodCallParameters.get(0));
 				} else if ("getClientVersion".equals(firstToken)) {
 					return PacScriptMethods.getClientVersion();
+				} else if ("alert".equals(firstToken)) {
+					// Debug output of browsers, ignored here
+					return null;
 				} else {
 					throw new RuntimeException("Call of undefined method: " + firstToken);
 				}
 			} else if (expressionTokens.size() > 1 && expressionTokens.get(1).equals("[")) {
-				if (context.hasVariable(firstToken)) {
+				if (PacScriptParserUtilities.findClosingBracketToken(expressionTokens, 1) != expressionTokens.size() - 1) {
+					throw new RuntimeException("Unexpected expression when expecting single value");
+				} else if (context.hasVariable(firstToken)) {
 					final int arrayIndex = readArrayIndex(context, expressionTokens, 1);
 					final Object arrayObject = context.getEnvironmentVariable(firstToken);
 					if (arrayObject == null || !(arrayObject instanceof List)) {
@@ -355,64 +442,183 @@ public class Expression implements Statement {
 					throw new RuntimeException("Array Index call for undefined variable: " + firstToken);
 				}
 			} else {
-				if ("true".equals(firstToken)) {
+				if (expressionTokens.size() > 1) {
+					throw new RuntimeException("Unexpected expression when expecting single value");
+				} else if ("true".equals(firstToken)) {
 					return true;
 				} else if ("false".equals(firstToken)) {
 					return false;
 				} else if (context.hasVariable(firstToken)) {
 					return context.getEnvironmentVariable(firstToken);
-				} else if (firstToken.startsWith("\"") && firstToken.endsWith("\"")) {
-					return firstToken.substring(1, firstToken.length() - 1);
+				} else if ("null".equals(firstToken) || "undefined".equals(firstToken)) {
+					return null;
+				} else if (firstToken.length() >= 2 && ((firstToken.startsWith("\"") && firstToken.endsWith("\"")) || (firstToken.startsWith("'") && firstToken.endsWith("'")))) {
+					return unescapeStringLiteral(firstToken.substring(1, firstToken.length() - 1));
 				} else if (firstToken.endsWith(".length")) {
 					final String arrayName = firstToken.substring(0, firstToken.length() - 7);
 					if (context.hasVariable(arrayName)) {
 						final Object arrayObject = context.getEnvironmentVariable(arrayName);
 						if (arrayObject != null && arrayObject instanceof List<?>) {
 							return ((List<?>) arrayObject).size();
+						} else if (arrayObject instanceof String) {
+							return ((String) arrayObject).length();
 						} else {
 							throw new RuntimeException("Variable for length is not an array: " + firstToken);
 						}
 					} else {
 						throw new RuntimeException("Undefined variable name in expression: " + firstToken);
 					}
-				} else if (expressionTokens.size() > 1) {
-					throw new RuntimeException("Unexpected expression when expecting single value");
 				} else {
-					try {
-						return Integer.parseInt(firstToken);
-					} catch (@SuppressWarnings("unused") final NumberFormatException e1) {
-						try {
-							return Float.parseFloat(firstToken);
-						} catch (@SuppressWarnings("unused") final NumberFormatException e2) {
-							try {
-								return Double.parseDouble(firstToken);
-							} catch (@SuppressWarnings("unused") final NumberFormatException e3) {
-								throw new RuntimeException("Unexpected code in expression: " + firstToken);
-							}
-						}
-					}
+					return parseNumber(firstToken);
 				}
 			}
 		}
 	}
 
-	private List<Object> readMethodParameters(final Context context, int bracketStartTokenIndex) {
-		final int parametersEnd = PacScriptParserUtilities.findClosingBracketToken(expressionTokens, bracketStartTokenIndex);
-		bracketStartTokenIndex++;
-		final List<Object> methodCallParameters = new ArrayList<>();
-		while (bracketStartTokenIndex < parametersEnd) {
-			final int nextParameterStart = bracketStartTokenIndex;
-			int nextParameterEnd = bracketStartTokenIndex;
-			String parameterToken = expressionTokens.get(nextParameterEnd);
-			while (!(",".equals(parameterToken) || ")".equals(parameterToken))) {
-				nextParameterEnd++;
-				parameterToken = expressionTokens.get(nextParameterEnd);
+	/**
+	 * Parses a JavaScript number literal.
+	 *
+	 * @param token
+	 *            the number literal
+	 * @return an Integer, if the value is integral and fits, otherwise a Double
+	 */
+	private static Object parseNumber(final String token) {
+		if ("NaN".equals(token)) {
+			return Double.NaN;
+		} else if ("Infinity".equals(token)) {
+			return Double.POSITIVE_INFINITY;
+		} else if (HEX_NUMBER_PATTERN.matcher(token).matches()) {
+			final long value = Long.parseLong(token.substring(2), 16);
+			if (value <= Integer.MAX_VALUE) {
+				return (int) value;
+			} else {
+				return (double) value;
 			}
-			final Object parameterValue = new Expression(expressionTokens.subList(nextParameterStart, nextParameterEnd)).execute(context);
-			methodCallParameters.add(parameterValue);
-			bracketStartTokenIndex = nextParameterEnd + 1;
+		} else if (DECIMAL_NUMBER_PATTERN.matcher(token).matches()) {
+			try {
+				return Integer.parseInt(token);
+			} catch (@SuppressWarnings("unused") final NumberFormatException e) {
+				return Double.parseDouble(token);
+			}
+		} else {
+			throw new RuntimeException("Unexpected code in expression: " + token);
+		}
+	}
+
+	/**
+	 * Resolves the escape sequences of a JavaScript string literal.
+	 *
+	 * @param text
+	 *            the content of the string literal without quotes
+	 * @return the resolved text
+	 */
+	static String unescapeStringLiteral(final String text) {
+		if (text.indexOf('\\') < 0) {
+			return text;
+		}
+		final StringBuilder result = new StringBuilder(text.length());
+		int index = 0;
+		while (index < text.length()) {
+			final char currentChar = text.charAt(index);
+			if (currentChar != '\\' || index + 1 >= text.length()) {
+				result.append(currentChar);
+				index++;
+			} else {
+				final char escapedChar = text.charAt(index + 1);
+				index += 2;
+				switch (escapedChar) {
+					case 'n':
+						result.append('\n');
+						break;
+					case 't':
+						result.append('\t');
+						break;
+					case 'r':
+						result.append('\r');
+						break;
+					case 'b':
+						result.append('\b');
+						break;
+					case 'f':
+						result.append('\f');
+						break;
+					case 'v':
+						result.append((char) 0x0B);
+						break;
+					case '0':
+						result.append((char) 0x00);
+						break;
+					case 'u':
+						if (index + 4 <= text.length() && isHex(text.substring(index, index + 4))) {
+							result.append((char) Integer.parseInt(text.substring(index, index + 4), 16));
+							index += 4;
+						} else {
+							result.append(escapedChar);
+						}
+						break;
+					case 'x':
+						if (index + 2 <= text.length() && isHex(text.substring(index, index + 2))) {
+							result.append((char) Integer.parseInt(text.substring(index, index + 2), 16));
+							index += 2;
+						} else {
+							result.append(escapedChar);
+						}
+						break;
+					default:
+						// Covers \\, \", \' and \/ as well as unknown escapes, which stand for the character itself
+						result.append(escapedChar);
+						break;
+				}
+			}
+		}
+		return result.toString();
+	}
+
+	private static boolean isHex(final String text) {
+		for (final char character : text.toCharArray()) {
+			if (Character.digit(character, 16) < 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private List<Object> readMethodParameters(final Context context, final int bracketStartTokenIndex) {
+		final int parametersEnd = PacScriptParserUtilities.findClosingBracketToken(expressionTokens, bracketStartTokenIndex);
+		final List<Object> methodCallParameters = new ArrayList<>();
+		for (final List<String> parameterTokens : splitByCommaOutsideOfBrackets(expressionTokens.subList(bracketStartTokenIndex + 1, parametersEnd))) {
+			methodCallParameters.add(new Expression(parameterTokens).execute(context));
 		}
 		return methodCallParameters;
+	}
+
+	/**
+	 * Splits tokens at commas, which are not nested in brackets.
+	 *
+	 * @param tokens
+	 *            the tokens
+	 * @return the token groups, empty list for empty tokens
+	 */
+	private static List<List<String>> splitByCommaOutsideOfBrackets(final List<String> tokens) {
+		final List<List<String>> groups = new ArrayList<>();
+		if (tokens.isEmpty()) {
+			return groups;
+		}
+		int openBrackets = 0;
+		int groupStart = 0;
+		for (int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
+			final String token = tokens.get(tokenIndex);
+			if ("(".equals(token) || "[".equals(token)) {
+				openBrackets++;
+			} else if (")".equals(token) || "]".equals(token)) {
+				openBrackets--;
+			} else if (openBrackets == 0 && ",".equals(token)) {
+				groups.add(tokens.subList(groupStart, tokenIndex));
+				groupStart = tokenIndex + 1;
+			}
+		}
+		groups.add(tokens.subList(groupStart, tokens.size()));
+		return groups;
 	}
 
 	private static int readArrayIndex(final Context context, final List<String> expressionTokens, final int bracketStartTokenIndex) {
@@ -434,18 +640,7 @@ public class Expression implements Statement {
 	}
 
 	private static List<List<String>> readArrayItems(final List<String> expressionTokens) {
-		final List<List<String>> arrayItemTokens = new ArrayList<>();
-		List<String> nextItemTokens = new ArrayList<>();
-		for (final String nextToken : expressionTokens) {
-			if (",".equals(nextToken)) {
-				arrayItemTokens.add(nextItemTokens);
-				nextItemTokens = new ArrayList<>();
-			} else {
-				nextItemTokens.add(nextToken);
-			}
-		}
-		arrayItemTokens.add(nextItemTokens);
-		return arrayItemTokens;
+		return splitByCommaOutsideOfBrackets(expressionTokens);
 	}
 
 	@Override
@@ -469,27 +664,17 @@ public class Expression implements Statement {
 				return returnValue;
 			}
 		} else {
-			String returnValue = "";
-			if (expression1 != null) {
-				returnValue = expression1.toString();
+			if (bracketed) {
+				return "(" + expression1.toString() + ")";
+			} else if (expression1 == null) {
+				// Prefix operator
+				return operator + expression2.toString();
+			} else if (expression2 == null) {
+				// Postfix operator
+				return expression1.toString() + operator;
+			} else {
+				return expression1.toString() + " " + operator + " " + expression2.toString();
 			}
-			if (operator != null) {
-				if (expression1 != null && !"++".equals(operator) && !"--".equals(operator)) {
-					returnValue += " ";
-				}
-				returnValue += operator;
-				if ("!".equals(operator)) {
-					returnValue += "(";
-				}
-			}
-			if (expression2 != null) {
-				if (operator != null && ("!".equals(operator) || "++".equals(operator) || "--".equals(operator))) {
-					returnValue = returnValue + expression2.toString() + ")";
-				} else {
-					returnValue = returnValue + " " + expression2.toString();
-				}
-			}
-			return returnValue;
 		}
 	}
 

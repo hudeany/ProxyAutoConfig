@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -206,7 +205,7 @@ public class PacScriptMethods {
 	public static boolean weekdayRange(final String weekdayStart, final String weekdayEnd, final String gmt) {
 		// "GMT" may also be the second parameter, e.g. weekdayRange("MON", "GMT")
 		final boolean useGmt = GMT.equalsIgnoreCase(gmt) || GMT.equalsIgnoreCase(weekdayEnd);
-		final Calendar cal = getCurrentTime(useGmt);
+		final Calendar cal = inTimeZone(Calendar.getInstance(), useGmt);
 
 		final int currentDay = cal.get(Calendar.DAY_OF_WEEK) - 1;
 		final int from = indexOfCaseInsensitive(WEEKDAYS_SHORT, weekdayStart);
@@ -245,6 +244,33 @@ public class PacScriptMethods {
 	 */
 	public static boolean dateRange(final Object dayStart, final Object monthStart, final Object yearStart,
 			final Object dayEnd, final Object monthEnd, final Object yearEnd, final Object gmt) {
+		return dateRangeAt(Calendar.getInstance(), dayStart, monthStart, yearStart, dayEnd, monthEnd, yearEnd, gmt);
+	}
+
+	/**
+	 * Checks whether a given point in time is within a date range. Same as
+	 * {@link #dateRange(Object, Object, Object, Object, Object, Object, Object)}, but with a given current time.
+	 *
+	 * @param currentTime
+	 *            the point in time to check
+	 * @param dayStart
+	 *            first parameter
+	 * @param monthStart
+	 *            second parameter, or null
+	 * @param yearStart
+	 *            third parameter, or null
+	 * @param dayEnd
+	 *            fourth parameter, or null
+	 * @param monthEnd
+	 *            fifth parameter, or null
+	 * @param yearEnd
+	 *            sixth parameter, or null
+	 * @param gmt
+	 *            seventh parameter, or null
+	 * @return true, if the point in time is within the range
+	 */
+	public static boolean dateRangeAt(final Calendar currentTime, final Object dayStart, final Object monthStart, final Object yearStart,
+			final Object dayEnd, final Object monthEnd, final Object yearEnd, final Object gmt) {
 		final Map<String, Integer> params = new HashMap<>();
 		parseDateParam(params, dayStart);
 		parseDateParam(params, monthStart);
@@ -254,45 +280,45 @@ public class PacScriptMethods {
 		parseDateParam(params, yearEnd);
 		parseDateParam(params, gmt);
 
-		final boolean useGmt = params.get("gmt") != null;
-		final Calendar cal = getCurrentTime(useGmt);
-		final Date current = cal.getTime();
+		final Calendar cal = inTimeZone(currentTime, params.get("gmt") != null);
 
-		if (params.get("day1") != null) {
-			cal.set(Calendar.DAY_OF_MONTH, params.get("day1"));
-		}
-		if (params.get("month1") != null) {
-			cal.set(Calendar.MONTH, params.get("month1"));
-		}
-		if (params.get("year1") != null) {
-			cal.set(Calendar.YEAR, params.get("year1"));
-		}
-		final Date from = cal.getTime();
-
-		Date to;
-		if (params.get("day2") != null) {
-			cal.set(Calendar.DAY_OF_MONTH, params.get("day2"));
-		}
-		if (params.get("month2") != null) {
-			cal.set(Calendar.MONTH, params.get("month2"));
-		}
-		if (params.get("year2") != null) {
-			cal.set(Calendar.YEAR, params.get("year2"));
-		}
-		to = cal.getTime();
-
-		if (to.before(from)) {
-			cal.add(Calendar.MONTH, +1);
-			to = cal.getTime();
+		// Only the date components given in the parameters are compared, so there are no problems with times of day or daylight saving time
+		final boolean useDay = params.get("day1") != null;
+		final boolean useMonth = params.get("month1") != null;
+		final boolean useYear = params.get("year1") != null;
+		if (!useDay && !useMonth && !useYear) {
+			// No valid day, month or year given
+			return false;
 		}
 
-		if (to.before(from)) {
-			cal.add(Calendar.YEAR, +1);
-			cal.add(Calendar.MONTH, -1);
-			to = cal.getTime();
+		final boolean hasEnd = params.get("day2") != null || params.get("month2") != null || params.get("year2") != null;
+		final int current = maskedDate(useYear, useMonth, useDay, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
+		final int from = maskedDate(useYear, useMonth, useDay, params.get("year1"), params.get("month1"), params.get("day1"));
+		final int to;
+		if (hasEnd) {
+			// Missing end components default to the start components
+			to = maskedDate(useYear, useMonth, useDay,
+					params.get("year2") != null ? params.get("year2") : params.get("year1"),
+					params.get("month2") != null ? params.get("month2") : params.get("month1"),
+					params.get("day2") != null ? params.get("day2") : params.get("day1"));
+		} else {
+			// Single day, month or year
+			to = from;
 		}
 
-		return current.compareTo(from) >= 0 && current.compareTo(to) <= 0;
+		if (from <= to) {
+			return current >= from && current <= to;
+		} else if (useYear) {
+			// A range with years cannot wrap around
+			return false;
+		} else {
+			// Range wrapping around the end of the month or year, e.g. "DEC" to "JAN"
+			return current >= from || current <= to;
+		}
+	}
+
+	private static int maskedDate(final boolean useYear, final boolean useMonth, final boolean useDay, final Integer year, final Integer month, final Integer day) {
+		return (useYear ? year * 10000 : 0) + (useMonth ? (month + 1) * 100 : 0) + (useDay ? day : 0);
 	}
 
 	/**
@@ -318,62 +344,80 @@ public class PacScriptMethods {
 	 */
 	public static boolean timeRange(final Object hour1, final Object min1, final Object sec1, final Object hour2,
 			final Object min2, final Object sec2, final Object gmt) {
+		return timeRangeAt(Calendar.getInstance(), hour1, min1, sec1, hour2, min2, sec2, gmt);
+	}
+
+	/**
+	 * Checks whether a given point in time is within a time range. Same as
+	 * {@link #timeRange(Object, Object, Object, Object, Object, Object, Object)}, but with a given current time.
+	 *
+	 * @param currentTime
+	 *            the point in time to check
+	 * @param hour1
+	 *            first parameter
+	 * @param min1
+	 *            second parameter, or null
+	 * @param sec1
+	 *            third parameter, or null
+	 * @param hour2
+	 *            fourth parameter, or null
+	 * @param min2
+	 *            fifth parameter, or null
+	 * @param sec2
+	 *            sixth parameter, or null
+	 * @param gmt
+	 *            seventh parameter, or null
+	 * @return true, if the point in time is within the range
+	 */
+	public static boolean timeRangeAt(final Calendar currentTime, final Object hour1, final Object min1, final Object sec1, final Object hour2,
+			final Object min2, final Object sec2, final Object gmt) {
 		final boolean useGmt = GMT.equalsIgnoreCase(String.valueOf(min1)) || GMT.equalsIgnoreCase(String.valueOf(sec1))
 				|| GMT.equalsIgnoreCase(String.valueOf(min2)) || GMT.equalsIgnoreCase(String.valueOf(gmt));
 
-		final Calendar cal = getCurrentTime(useGmt);
-		cal.set(Calendar.MILLISECOND, 0);
-		final Date current = cal.getTime();
-		Date from;
-		Date to;
+		final Calendar cal = inTimeZone(currentTime, useGmt);
+
+		// Seconds of the day are compared, so there are no problems with daylight saving time
+		final int current = secondsOfDay(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), cal.get(Calendar.SECOND));
+		final int from;
+		final int to;
 		if (sec2 instanceof Number) {
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour1).intValue());
-			cal.set(Calendar.MINUTE, ((Number) min1).intValue());
-			cal.set(Calendar.SECOND, ((Number) sec1).intValue());
-			from = cal.getTime();
-
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour2).intValue());
-			cal.set(Calendar.MINUTE, ((Number) min2).intValue());
-			cal.set(Calendar.SECOND, ((Number) sec2).intValue());
-			to = cal.getTime();
+			from = secondsOfDay(toInt(hour1), toInt(min1), toInt(sec1));
+			to = secondsOfDay(toInt(hour2), toInt(min2), toInt(sec2));
 		} else if (hour2 instanceof Number) {
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour1).intValue());
-			cal.set(Calendar.MINUTE, ((Number) min1).intValue());
-			cal.set(Calendar.SECOND, 0);
-			from = cal.getTime();
-
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) sec1).intValue());
-			cal.set(Calendar.MINUTE, ((Number) hour2).intValue());
-			cal.set(Calendar.SECOND, 59);
-			to = cal.getTime();
+			from = secondsOfDay(toInt(hour1), toInt(min1), 0);
+			to = secondsOfDay(toInt(sec1), toInt(hour2), 59);
 		} else if (min1 instanceof Number) {
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour1).intValue());
-			cal.set(Calendar.MINUTE, 0);
-			cal.set(Calendar.SECOND, 0);
-			from = cal.getTime();
-
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) min1).intValue());
-			cal.set(Calendar.MINUTE, 59);
-			cal.set(Calendar.SECOND, 59);
-			to = cal.getTime();
+			from = secondsOfDay(toInt(hour1), 0, 0);
+			to = secondsOfDay(toInt(min1), 59, 59);
 		} else {
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour1).intValue());
-			cal.set(Calendar.MINUTE, 0);
-			cal.set(Calendar.SECOND, 0);
-			from = cal.getTime();
-
-			cal.set(Calendar.HOUR_OF_DAY, ((Number) hour1).intValue());
-			cal.set(Calendar.MINUTE, 59);
-			cal.set(Calendar.SECOND, 59);
-			to = cal.getTime();
+			from = secondsOfDay(toInt(hour1), 0, 0);
+			to = secondsOfDay(toInt(hour1), 59, 59);
 		}
 
-		if (to.before(from)) {
+		if (to < from) {
 			// Range over midnight, e.g. 22:00 to 02:00
-			return current.compareTo(from) >= 0 || current.compareTo(to) <= 0;
+			return current >= from || current <= to;
+		} else {
+			return current >= from && current <= to;
 		}
+	}
 
-		return current.compareTo(from) >= 0 && current.compareTo(to) <= 0;
+	private static int secondsOfDay(final int hour, final int minute, final int second) {
+		return hour * 3600 + minute * 60 + second;
+	}
+
+	private static int toInt(final Object value) {
+		if (value instanceof Number) {
+			return ((Number) value).intValue();
+		} else {
+			throw new RuntimeException("Invalid numeric parameter: " + value);
+		}
+	}
+
+	private static Calendar inTimeZone(final Calendar time, final boolean useGmt) {
+		final Calendar cal = Calendar.getInstance(useGmt ? TimeZone.getTimeZone(GMT) : TimeZone.getDefault());
+		cal.setTimeInMillis(time.getTimeInMillis());
+		return cal;
 	}
 
 	/**
@@ -544,10 +588,6 @@ public class PacScriptMethods {
 		} catch (@SuppressWarnings("unused") final IOException e) {
 			return "";
 		}
-	}
-
-	private static Calendar getCurrentTime(final boolean useGmt) {
-		return Calendar.getInstance(useGmt ? TimeZone.getTimeZone(GMT) : TimeZone.getDefault());
 	}
 
 	private static void parseDateParam(final Map<String, Integer> params, final Object value) {

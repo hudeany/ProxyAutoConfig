@@ -79,66 +79,55 @@ public class PacScriptParserUtilities {
 	 * @return the script without comments
 	 */
 	public static String removeComments(final String text) {
-		final int outsideComment = 0;
-		final int insideStringLiteral = 1;
-		final int insideSinglelineComment = 2;
-		final int insideMultilineComment = 3;
-
-		int currentState = outsideComment;
-		String result = "";
-		try (Scanner textScanner = new Scanner(text).useDelimiter("")) {
-			while (textScanner.hasNext()) {
-				final String currentCharString = textScanner.next();
-				final char currentChar = currentCharString.charAt(0);
-				switch (currentState) {
-					case outsideComment:
-						if (currentChar == '\"') {
-							currentState = insideStringLiteral;
-							result += currentChar;
-						} else if (currentChar == '/' && textScanner.hasNext()) {
-							final String nextCharString = textScanner.next();
-							final char nextChar = nextCharString.charAt(0);
-							if (nextChar == '/') {
-								currentState = insideSinglelineComment;
-							} else if (nextChar == '*') {
-								currentState = insideMultilineComment;
-							} else
-								result = result + currentChar + nextChar;
-						} else {
-							result += currentChar;
-						}
-						break;
-					case insideStringLiteral:
-						result += currentChar;
-						if (currentChar == '\\' && textScanner.hasNext()) {
-							final String nextChar = textScanner.next();
-							result += nextChar;
-						} else if (currentChar == '\"') {
-							currentState = outsideComment;
-						}
-						break;
-					case insideSinglelineComment:
-						if (currentChar == '\n') {
-							currentState = outsideComment;
-							result += "\n";
-						}
-						break;
-					case insideMultilineComment:
-						if (currentChar == '*' && textScanner.hasNext()) {
-							final String nextCharString = textScanner.next();
-							final char nextChar = nextCharString.charAt(0);
-							if (nextChar == '/') {
-								currentState = outsideComment;
-								break;
-							}
-						}
-						break;
-					default:
-						throw new RuntimeException("Invalid state");
-				}
+		final StringBuilder result = new StringBuilder(text.length());
+		int index = 0;
+		while (index < text.length()) {
+			final char currentChar = text.charAt(index);
+			if (currentChar == '\"' || currentChar == '\'') {
+				// String literal in double or single quotes, comment markers inside are kept
+				final int literalEnd = findStringLiteralEnd(text, index);
+				result.append(text, index, literalEnd);
+				index = literalEnd;
+			} else if (currentChar == '/' && index + 1 < text.length() && text.charAt(index + 1) == '/') {
+				// Single line comment: the line break is kept
+				final int lineEnd = text.indexOf('\n', index + 2);
+				index = lineEnd < 0 ? text.length() : lineEnd;
+			} else if (currentChar == '/' && index + 1 < text.length() && text.charAt(index + 1) == '*') {
+				// Block comment: ends with the first "*/" after the opening "/*" (also within "**/")
+				final int commentEnd = text.indexOf("*/", index + 2);
+				index = commentEnd < 0 ? text.length() : commentEnd + 2;
+			} else {
+				result.append(currentChar);
+				index++;
 			}
 		}
-		return result;
+		return result.toString();
+	}
+
+	/**
+	 * Returns the index after the closing quote of a string literal, which starts at the given index with a single or double quote.
+	 * Escaped quotes ("\"") do not end the string literal. An unterminated string literal ends at the end of the text.
+	 *
+	 * @param text
+	 *            the script
+	 * @param startIndex
+	 *            index of the opening quote
+	 * @return the index after the closing quote or the length of the text
+	 */
+	private static int findStringLiteralEnd(final String text, final int startIndex) {
+		final char quote = text.charAt(startIndex);
+		int index = startIndex + 1;
+		while (index < text.length()) {
+			final char currentChar = text.charAt(index);
+			if (currentChar == '\\') {
+				index += 2;
+			} else if (currentChar == quote) {
+				return index + 1;
+			} else {
+				index++;
+			}
+		}
+		return text.length();
 	}
 
 	/**
@@ -237,13 +226,16 @@ public class PacScriptParserUtilities {
 
 			String nextToken = "";
 			Character previousCharacter = null;
+			// Quote character of the current string literal: string literals may use double or single quotes
+			char quoteCharacter = '\"';
 			while (textScanner.hasNext()) {
 				final String currentCharString = textScanner.next();
 				final Character currentCharacter = currentCharString.charAt(0);
 				switch (currentState) {
 					case outsideStringLiteral:
-						if (currentCharacter == '\"') {
+						if (currentCharacter == '\"' || currentCharacter == '\'') {
 							nextToken += currentCharString;
+							quoteCharacter = currentCharacter;
 							currentState = insideStringLiteral;
 						} else if (currentCharacter == '(' || currentCharacter == ')') {
 							if (nextToken.length() > 0) {
@@ -280,6 +272,9 @@ public class PacScriptParserUtilities {
 								nextToken = "";
 							}
 							tokens.add(currentCharString);
+						} else if ((currentCharacter == '+' || currentCharacter == '-') && nextToken.matches("[0-9]+\\.?[0-9]*[eE]")) {
+							// Sign of the exponent of a number literal like "1e-3"
+							nextToken += currentCharString;
 						} else if (currentCharacter == '+' || currentCharacter == '-'
 								|| currentCharacter == '&' || currentCharacter == '|') {
 							if (nextToken.length() > 0) {
@@ -317,7 +312,7 @@ public class PacScriptParserUtilities {
 						if (currentCharacter == '\\' && textScanner.hasNext()) {
 							final String nextCharString = textScanner.next();
 							nextToken += currentCharString + nextCharString;
-						} else if (currentCharacter == '\"') {
+						} else if (currentCharacter == quoteCharacter) {
 							nextToken += currentCharString;
 							tokens.add(nextToken);
 							nextToken = "";
@@ -393,13 +388,19 @@ public class PacScriptParserUtilities {
 	 * Parses the tokens of a code block into statements: declarations, assignments, conditions,
 	 * loops, return statements and expressions.
 	 *
-	 * @param codeBlockTokens
+	 * @param codeBlockTokensParameter
 	 *            the tokens without the surrounding brackets
 	 * @return the statements
 	 * @throws RuntimeException
 	 *             if the code is invalid or not supported
 	 */
-	public static List<Statement> parseCodeBlockTokens(final List<String> codeBlockTokens) {
+	public static List<Statement> parseCodeBlockTokens(final List<String> codeBlockTokensParameter) {
+		List<String> codeBlockTokens = codeBlockTokensParameter;
+		if (!codeBlockTokens.isEmpty() && !";".equals(codeBlockTokens.get(codeBlockTokens.size() - 1)) && !"}".equals(codeBlockTokens.get(codeBlockTokens.size() - 1))) {
+			// Terminate the last statement, if the semicolon before the end of the code block was omitted
+			codeBlockTokens = new ArrayList<>(codeBlockTokens);
+			codeBlockTokens.add(";");
+		}
 		final List<Statement> statements = new ArrayList<>();
 		for (int tokenIndex = 0; tokenIndex < codeBlockTokens.size(); tokenIndex++) {
 			String nextToken = codeBlockTokens.get(tokenIndex);
@@ -455,7 +456,8 @@ public class PacScriptParserUtilities {
 							final int elseCodeBlockEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, elseCodeBlockStart);
 							endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart + 1, elseCodeBlockEnd);
 							parentCondition.setElseCodeBlockTokens(endCodeBlockTokens);
-							tokenIndex = elseCodeBlockEnd + 1;
+							// The for loop moves on to the token after the closing bracket
+							tokenIndex = elseCodeBlockEnd;
 						} else if ("if".equals(nextToken)) {
 							foundElseIf = true;
 							tokenIndex++;
@@ -505,7 +507,8 @@ public class PacScriptParserUtilities {
 								final int elseCodeBlockEnd = tokenIndex;
 								endCodeBlockTokens = codeBlockTokens.subList(elseCodeBlockStart, elseCodeBlockEnd);
 								parentCondition.setElseCodeBlockTokens(endCodeBlockTokens);
-								tokenIndex = elseCodeBlockEnd;
+								// The for loop moves on to the token after the semicolon
+								tokenIndex = elseCodeBlockEnd - 1;
 							}
 						}
 					} else {
@@ -820,12 +823,44 @@ public class PacScriptParserUtilities {
 					}
 
 					statements.add(new Assignment(variableName, Arrays.asList(variableName, "-", "1")));
+				} else if (codeBlockTokens.size() > tokenIndex + 1 && "(".equals(codeBlockTokens.get(tokenIndex + 1)) && isIdentifier(nextToken)) {
+					// Expression statement like a method call "alert('text');"
+					final int expressionStart = tokenIndex;
+					final int callEnd = PacScriptParserUtilities.findClosingBracketToken(codeBlockTokens, tokenIndex + 1);
+					tokenIndex = callEnd + 1;
+					while (tokenIndex < codeBlockTokens.size() && !";".equals(codeBlockTokens.get(tokenIndex))) {
+						tokenIndex++;
+					}
+					if (tokenIndex >= codeBlockTokens.size()) {
+						throw new RuntimeException("Unexpected code at token index " + expressionStart + ": " + nextToken);
+					}
+					statements.add(new Expression(codeBlockTokens.subList(expressionStart, tokenIndex)));
 				} else {
 					throw new RuntimeException("Unsupported code found: " + nextToken);
 				}
 			}
 		}
 		return statements;
+	}
+
+	/**
+	 * Checks whether a token is a JavaScript identifier (name of a variable or method).
+	 *
+	 * @param token
+	 *            the token
+	 * @return true if the token is an identifier
+	 */
+	public static boolean isIdentifier(final String token) {
+		if (token == null || token.isEmpty() || !(Character.isLetter(token.charAt(0)) || token.charAt(0) == '_' || token.charAt(0) == '$')) {
+			return false;
+		}
+		for (int i = 1; i < token.length(); i++) {
+			final char character = token.charAt(i);
+			if (!(Character.isLetterOrDigit(character) || character == '_' || character == '$' || character == '.')) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**

@@ -80,87 +80,35 @@ public class Condition implements Statement {
 
 	@Override
 	public Object execute(final Context context) {
-		final Object conditionResult = condition.execute(context);
-		if (conditionResult == null) {
-			if (elseStatements != null) {
-				for (final Statement elseStatement : elseStatements) {
-					final Object result = elseStatement.execute(context);
-					if (elseStatement instanceof Result) {
-						return result;
-					}
-				}
-				return null;
-			} else {
-				return null;
+		final List<Statement> statementsToExecute = isTruthy(condition.execute(context)) ? ifStatements : elseStatements;
+		if (statementsToExecute != null) {
+			// A return statement leaves the block via ReturnException
+			for (final Statement statement : statementsToExecute) {
+				statement.execute(context);
 			}
-		} else if (conditionResult instanceof Boolean) {
-			if ((Boolean) conditionResult) {
-				for (final Statement ifStatement : ifStatements) {
-					final Object result = ifStatement.execute(context);
-					if (result != null) {
-						return result;
-					}
-				}
-				return null;
-			} else {
-				if (elseStatements != null) {
-					for (final Statement elseStatement : elseStatements) {
-						final Object result = elseStatement.execute(context);
-						if (result != null) {
-							return result;
-						}
-					}
-				}
-				return null;
-			}
-		} else if (conditionResult instanceof Number) {
-			if (((Number) conditionResult).doubleValue() > 0) {
-				for (final Statement ifStatement : ifStatements) {
-					final Object result = ifStatement.execute(context);
-					if (ifStatement instanceof Result) {
-						return result;
-					}
-				}
-				return null;
-			} else {
-				if (elseStatements != null) {
-					for (final Statement elseStatement : elseStatements) {
-						final Object result = elseStatement.execute(context);
-						if (elseStatement instanceof Result) {
-							return result;
-						}
-					}
-				}
-				return null;
-			}
-		} else if (conditionResult instanceof String) {
-			if (((String) conditionResult).trim().length() > 0) {
-				for (final Statement ifStatement : ifStatements) {
-					final Object result = ifStatement.execute(context);
-					if (ifStatement instanceof Result) {
-						return result;
-					}
-				}
-				return null;
-			} else {
-				if (elseStatements != null) {
-					for (final Statement elseStatement : elseStatements) {
-						final Object result = elseStatement.execute(context);
-						if (elseStatement instanceof Result) {
-							return result;
-						}
-					}
-				}
-				return null;
-			}
+		}
+		return null;
+	}
+
+	/**
+	 * Converts a value to a boolean like JavaScript does: false, null (undefined), 0, NaN and the empty string are false, everything else is true.
+	 *
+	 * @param value
+	 *            the value
+	 * @return the boolean value
+	 */
+	public static boolean isTruthy(final Object value) {
+		if (value == null) {
+			return false;
+		} else if (value instanceof Boolean) {
+			return (Boolean) value;
+		} else if (value instanceof Number) {
+			final double doubleValue = ((Number) value).doubleValue();
+			return doubleValue != 0 && !Double.isNaN(doubleValue);
+		} else if (value instanceof String) {
+			return !((String) value).isEmpty();
 		} else {
-			for (final Statement ifStatement : ifStatements) {
-				final Object result = ifStatement.execute(context);
-				if (ifStatement instanceof Result) {
-					return result;
-				}
-			}
-			return null;
+			return true;
 		}
 	}
 
